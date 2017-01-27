@@ -1,4 +1,4 @@
-package com.example.brendan.mainpackage;
+package com.example.brendan.mainpackage.model;
 
 /**
  * Created by brendan on 1/27/17.

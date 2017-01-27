@@ -1,4 +1,4 @@
-package com.example.brendan.mainpackage;
+package com.example.brendan.mainpackage.model;
 
 import java.util.List;
 
