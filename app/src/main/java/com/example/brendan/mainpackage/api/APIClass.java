@@ -2,19 +2,25 @@ package com.example.brendan.mainpackage.api;
 
 import android.location.Location;
 
+import com.example.brendan.mainpackage.event.DataEvent;
 import com.example.brendan.mainpackage.event.DataSetEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
+import com.example.brendan.mainpackage.model.DataModel;
 import com.example.brendan.mainpackage.model.DataSetModel;
 import com.example.brendan.mainpackage.model.LocationModel;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.util.UUID;
+
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
+
+
 /**
- * Created by brendan on 1/27/17.
+ * API class for all api calls using the interface class
  */
 
 public class APIClass {
@@ -25,14 +31,15 @@ public class APIClass {
         this.controller = RetroController.getServer();
     }
 
-    public void getLocations(){
-    Call<LocationModel> call = controller.getLocation();
+    public UUID getLocations(){
+        final UUID uuid = UUID.randomUUID();
+        Call<LocationModel> call = controller.getLocation();
         call.enqueue(new Callback<LocationModel>() {
             @Override
             public void onResponse(Call<LocationModel> call, Response<LocationModel> response) {
                 LocationEvent event;
                 if(response.isSuccessful()) {
-                    event = new LocationEvent(response.body());
+                    event = new LocationEvent(uuid,response.body());
                     EventBus.getDefault().post(event);
                 }else {
                     int status = response.code();
@@ -45,17 +52,17 @@ public class APIClass {
                 t.printStackTrace();
             }
         });
-
-
+        return uuid;
     }
-    public void getLocationById(String id){
+    public UUID getLocationById(String id){
+        final UUID uuid = UUID.randomUUID();
         Call<LocationModel> call = controller.getLocationById(id);
         call.enqueue(new Callback<LocationModel>() {
             @Override
             public void onResponse(Call<LocationModel> call, Response<LocationModel> response) {
                 LocationEvent event;
                 if(response.isSuccessful()) {
-                    event = new LocationEvent(response.body());
+                    event = new LocationEvent(uuid,response.body());
                     EventBus.getDefault().post(event);
                 }else {
                     int status = response.code();
@@ -68,18 +75,18 @@ public class APIClass {
                 t.printStackTrace();
             }
         });
-
-
+        return uuid;
     }
 
-    public void getDataSets(){
+    public UUID getDataSets(){
+        final UUID uuid = UUID.randomUUID();
         Call<DataSetModel> call = controller.getDataSets();
         call.enqueue(new Callback<DataSetModel>() {
             @Override
             public void onResponse(Call<DataSetModel> call, Response<DataSetModel> response) {
                 DataSetEvent event;
                 if(response.isSuccessful()){
-                    event = new DataSetEvent(response.body());
+                    event = new DataSetEvent(uuid,response.body());
                     EventBus.getDefault().post(event);
                 }else {
                     int status = response.code();
@@ -92,6 +99,30 @@ public class APIClass {
                 t.printStackTrace();
             }
         });
+        return uuid;
     }
 
+    public UUID getData(String id,String startdate,String enddata){
+        final UUID uuid = UUID.randomUUID();
+        Call<DataModel> call = controller.getData(id,startdate,enddata);
+        call.enqueue(new Callback<DataModel>() {
+            @Override
+            public void onResponse(Call<DataModel> call, Response<DataModel> response) {
+                DataEvent event;
+                if(response.isSuccessful()){
+                    event = new DataEvent(uuid,response.body());
+                    EventBus.getDefault().post(event);
+                }else{
+                    int status = response.code();
+                    System.out.println("Status Code: " + status);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DataModel> call, Throwable t) {
+            t.printStackTrace();
+            }
+        });
+        return uuid;
+    }
 }

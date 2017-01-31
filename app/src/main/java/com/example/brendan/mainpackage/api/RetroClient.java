@@ -16,7 +16,7 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
- * Created by brendan on 1/27/17.
+ * Client class that uses Retrofit to establish a connection the the web service
  */
 
 //TODO- Get connected to service with given token as header

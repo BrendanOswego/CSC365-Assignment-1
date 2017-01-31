@@ -1,14 +1,14 @@
 package com.example.brendan.mainpackage.api;
 
 /**
- * Created by brendan on 1/27/17.
+ * Singleton class for accessing the API that contains the base URL for all API calls
  */
 
-public class RetroController {
+class RetroController {
 
-    private final static String base_url = "http://www.ncdc.noaa.gov/cdo-web/api/v2/";
+    private final static String base_url = "https://www.ncdc.noaa.gov/cdo-web/api/v2/";
 
-    public static RetroInterface getServer(){
+    static RetroInterface getServer(){
         return RetroClient.getClient(base_url).create(RetroInterface.class);
     }
 
