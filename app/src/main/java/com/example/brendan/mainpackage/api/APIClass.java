@@ -2,7 +2,9 @@ package com.example.brendan.mainpackage.api;
 
 import android.location.Location;
 
+import com.example.brendan.mainpackage.event.DataSetEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
+import com.example.brendan.mainpackage.model.DataSetModel;
 import com.example.brendan.mainpackage.model.LocationModel;
 
 import org.greenrobot.eventbus.EventBus;
@@ -68,6 +70,28 @@ public class APIClass {
         });
 
 
+    }
+
+    public void getDataSets(){
+        Call<DataSetModel> call = controller.getDataSets();
+        call.enqueue(new Callback<DataSetModel>() {
+            @Override
+            public void onResponse(Call<DataSetModel> call, Response<DataSetModel> response) {
+                DataSetEvent event;
+                if(response.isSuccessful()){
+                    event = new DataSetEvent(response.body());
+                    EventBus.getDefault().post(event);
+                }else {
+                    int status = response.code();
+                    System.out.println("Status Code: " + status);
+                }
+            }
+
+            @Override
+            public void onFailure(Call<DataSetModel> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
     }
 
 }
