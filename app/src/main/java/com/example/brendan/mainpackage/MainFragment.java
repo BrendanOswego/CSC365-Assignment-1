@@ -2,7 +2,6 @@ package com.example.brendan.mainpackage;
 
 import android.os.Bundle;
 import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -41,13 +40,13 @@ public class MainFragment extends BaseFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        api = new APIClass();
+        //api = new APIClass();
         EventBus.getDefault().register(this);
     }
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,  Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.frag_main,container,false);
-        locationUuid = api.getLocations();
+        final View view = inflater.inflate(R.layout.frag_main,container,false);
+        //locationUuid = api.getLocations();
         return view;
     }
 

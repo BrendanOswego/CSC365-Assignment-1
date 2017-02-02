@@ -1,7 +1,7 @@
 package com.example.brendan.mainpackage;
 
 
-import android.app.Fragment;
+import android.support.v4.app.Fragment;
 
 /**
  * Created by brendan on 2/1/17.
