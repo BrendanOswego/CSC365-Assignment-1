@@ -25,8 +25,11 @@ public interface RetroInterface {
     @GET("datasets?limit=25")
     Call<DataSetModel> getDataSets();
 
-    @GET("data?&locationid=ZIP:13126")
-    Call<DataModel> getData(@Query("datasetid") String id, @Query("startdate")String startdate, @Query("enddate")String enddate);
+    @GET("data")
+    Call<DataModel> getData(@Query("datasetid") String id,
+                            @Query("locationid")String locationId,
+                            @Query("startdate")String startdate,
+                            @Query("enddate")String enddate);
 
 
 
