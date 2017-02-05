@@ -31,6 +31,7 @@ public interface RetroInterface {
                             @Query("startdate")String startdate,
                             @Query("enddate")String enddate);
 
-
+    @GET("locations?locationcategoryid=ST&limit=52")
+    Call<LocationModel> getAllStates();
 
 }

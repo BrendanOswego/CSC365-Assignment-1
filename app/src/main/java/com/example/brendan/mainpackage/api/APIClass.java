@@ -27,7 +27,16 @@ public class APIClass {
 
     private RetroInterface controller;
 
-    public APIClass(){
+    private static APIClass instance;
+
+
+    public static APIClass getInstance(){
+        if(instance == null){
+            instance = new APIClass();
+        }
+        return instance;
+    }
+    private APIClass(){
         this.controller = RetroController.getServer();
     }
 
@@ -125,4 +134,28 @@ public class APIClass {
         });
         return uuid;
     }
+
+    public UUID getAllStates(){
+        final UUID uuid = UUID.randomUUID();
+        Call<LocationModel> call = controller.getAllStates();
+        call.enqueue(new Callback<LocationModel>() {
+            @Override
+            public void onResponse(Call<LocationModel> call, Response<LocationModel> response) {
+                LocationEvent event = null;
+                if(response.isSuccessful()) {
+                    event = new LocationEvent(uuid,response.body());
+                }else {
+                    int status = response.code();
+                    System.out.println("Status Code: "+status);
+                }
+                EventBus.getDefault().post(event);
+            }
+            @Override
+            public void onFailure(Call<LocationModel> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
+        return uuid;
+    }
+
 }

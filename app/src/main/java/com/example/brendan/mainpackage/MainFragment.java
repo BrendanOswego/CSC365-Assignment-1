@@ -1,56 +1,63 @@
 package com.example.brendan.mainpackage;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 
 import com.example.brendan.mainpackage.api.APIClass;
+import com.example.brendan.mainpackage.event.DataEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
 import com.example.brendan.mainpackage.model.DataResults;
+import com.example.brendan.mainpackage.model.Metadata;
 import com.example.brendan.mainpackage.model.Result;
-import com.example.brendan.mainpackage.model.ResultDataSet;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+
 /**
- * Created by brendan on 2/1/17.
+ * Fragment class for making API calls, using EventBus to listen for APIClass Event posts
  */
 
 public class MainFragment extends BaseFragment {
 
-    private APIClass api;
-    private List<Result> locationResults;
-    private List<ResultDataSet> dataSetResults;
+    private static final String TAG = MainFragment.class.getName();
+
+    private UUID locationUUID;
+    private UUID dataResultsUUID;
+    EastCoastList ecList = new EastCoastList();
+    CustomHashTable<String, Float> table;
     private List<DataResults> dataResults;
-    private int dataSetCount;
-    private int locationCount;
-    private int dataLimit;
-    private int dataCount;
-    private String firstId;
-    private UUID locationUuid;
-    private UUID datasetUuid;
-    private UUID dataUuid;
+
+    private int maxData;
+    private static final String start = "2016-01-01";
+    private static final String end = "2016-01-31";
+    private List<String> fipsList;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        //api = new APIClass();
+        table = new CustomHashTable<>();
+        fipsList = new ArrayList<>();
         EventBus.getDefault().register(this);
     }
+
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,  Bundle savedInstanceState) {
-        final View view = inflater.inflate(R.layout.frag_main,container,false);
-        //locationUuid = api.getLocations();
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        final View view = inflater.inflate(R.layout.frag_main, container, false);
+        locationUUID = APIClass.getInstance().getAllStates();
         return view;
     }
 
-
+    @Override
+    public void onViewCreated(View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+    }
 
     @Override
     public void onStart() {
@@ -79,29 +86,55 @@ public class MainFragment extends BaseFragment {
     }
 
     @Subscribe
-    public void onLocationEvent(LocationEvent event){
-        int i,j;
-        if(event.getUuid().equals(this.locationUuid)){
-            locationResults = event.getLocation().getResults();
-            i = event.getLocation().getMetadata().getResultset().getCount();
-            j = event.getLocation().getMetadata().getResultset().getLimit();
-            if(i < j){
-                locationCount = i;
-            }else {
-                locationCount = j;
+    public void onLocationEvent(LocationEvent event) {
+        if (event.getUuid().equals(this.locationUUID)) {
+            List<Result> locationResults = event.getLocation().getResults();
+            Metadata md_location = event.getLocation().getMetadata();
+            int i = md_location.getResultset().getCount();
+            int j = md_location.getResultset().getLimit();
+            int count = (i <= j) ? i : j;
+            for (int k = 0; k < count; k++) {
+                for (int l = 0; l < ecList.size(); l++) {
+                    if (locationResults.get(k).getName().equalsIgnoreCase(ecList.getList().get(l))
+                            && !fipsList.contains(locationResults.get(k).getId()))
+                        fipsList.add(locationResults.get(k).getId());
+                }
+
             }
+            System.out.println("FIPS SIZE: " + fipsList.size());
+            postLocationEvent(0);
         }
     }
 
-    private void locationEventInfo(){
-        int i;
-        for(i = 0;i<locationCount;i++){
-            if(locationResults.get(i) != null){
-                String name = locationResults.get(i).getName();
-                String id = locationResults.get(i).getId();
-                System.out.println("Name: " + name);
-                System.out.println("ID: " + id);
-            }
+    @Subscribe
+    public void onDataEvent(DataEvent event) {
+        if (event.getUuid().equals(this.dataResultsUUID)) {
+            dataResults = event.getDataModel().getResults();
+            Metadata md = event.getDataModel().getMetadata();
+            int i = md.getResultset().getCount();
+            int j = md.getResultset().getLimit();
+            maxData = (i <= j) ? i : j;
+            postDataEvent();
+        }
+    }
+
+    private void postDataEvent() {
+        for (int i = 0; i < maxData ; i++) {
+            table.insert(dataResults.get(i).getDatatype(), dataResults.get(i).getValue());
+        }
+        for (int i = 0; i < maxData; i++) {
+            System.out.println(table.search(dataResults.get(i).getDatatype()));
+        }
+
+    }
+
+    private void postLocationEvent(int i) {
+        dataResultsUUID = APIClass.getInstance().getData("GSOM", fipsList.get(i), start, end);
+    }
+
+    private void showFIPS() {
+        for (int i = 0; i < fipsList.size(); i++) {
+            System.out.println(fipsList.get(i));
         }
     }
 

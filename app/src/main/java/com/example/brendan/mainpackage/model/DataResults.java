@@ -10,7 +10,7 @@ public class DataResults {
     private String datatype;
     private String station;
     private String attributes;
-    private Integer value;
+    private Float value;
 
 
     public String getDate() {
@@ -45,11 +45,11 @@ public class DataResults {
         this.attributes = attributes;
     }
 
-    public Integer getValue() {
+    public Float getValue() {
         return value;
     }
 
-    public void setValue(Integer value) {
+    public void setValue(Float value) {
         this.value = value;
     }
 }
