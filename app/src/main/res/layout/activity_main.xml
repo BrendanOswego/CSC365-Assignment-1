@@ -10,11 +10,10 @@
     android:paddingTop="@dimen/activity_vertical_margin"
     tools:context="com.example.brendan.mainpackage.MainActivity">
 
-    <fragment
+    <FrameLayout
         android:id="@+id/fragment_container"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        class = "com.example.brendan.mainpackage.MainFragment"
         />
 
 </RelativeLayout>

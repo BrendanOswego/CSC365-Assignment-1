@@ -6,6 +6,7 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
@@ -34,6 +35,8 @@ public class RetroClient {
                 .setDateFormat("yyyy-MM-dd")
                 .create();
         OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                .connectTimeout(60, TimeUnit.SECONDS)
+                .readTimeout(60,TimeUnit.SECONDS)
                 .addNetworkInterceptor(logger);
         Interceptor interceptor = new Interceptor() {
             @Override
@@ -49,6 +52,8 @@ public class RetroClient {
         };
         builder.addInterceptor(interceptor);
         OkHttpClient client = builder.build();
+
+
         if(retrofit == null){
             retrofit =new  Retrofit.Builder()
                     .baseUrl(baseUrl)

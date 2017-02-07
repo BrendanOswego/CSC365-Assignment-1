@@ -1,19 +1,21 @@
 package com.example.brendan.mainpackage;
 
+import android.test.suitebuilder.annotation.Suppress;
+import android.util.Log;
+
 /**
  * Using Algorithms and Functions based off of
  * https://mitpress.mit.edu/books/introduction-algorithms pseudo-code
  */
-
+@SuppressWarnings("unchecked")
 public class CustomHashTable<K, V> {
-    //If no initial table size is given, default to INIT_SIZE
-    static final int INIT_SIZE = 128;
+    private static final String TAG = CustomHashTable.class.getName();
 
-    //Two necessities for building hash table being the amount of slots and the load factor
     private float loadFactor;
     private int slots;
-    private HashEntry[] table;
     private int size;
+    private HashEntry<K,V>[] hashTable;
+
 
     /**
      * Constructor to initialize instance of class, taking slots as a parameter,
@@ -25,73 +27,95 @@ public class CustomHashTable<K, V> {
     public CustomHashTable(int slots) {
         this.slots = slots;
         size = 0;
-        this.loadFactor = .75f;
-        this.table = new HashEntry[slots];
+        loadFactor = .75f;
+        hashTable = (HashEntry<K,V>[])new HashEntry[slots];
     }
 
     public CustomHashTable() {
         size = 0;
-        this.slots = INIT_SIZE;
-        this.loadFactor = .75f;
-        this.table = new HashEntry[slots];
+        this.slots = 128;
+        loadFactor = .75f;
+        hashTable = (HashEntry<K,V>[])new HashEntry[slots];
     }
 
     /**
-     * @param key   Key to be added to the HashMember[] table
-     * @return the slot key was added to
+     * @param key   Key to be added to the table
+     * @param value Value that key will store
      */
-    public int insert(K key,V value) {
-        int i = 0;
-        do {
-            int j = Math.abs(key.hashCode() % slots);
-            if (table[j] == null) {
-                HashEntry<K, V> element = new HashEntry<>(key, value);
-                table[j] = element;
-                return j;
-            } else {
-                i++;
+    public void insert(K key, V value) {
+
+        int j = Math.abs(key.hashCode() % slots);
+        HashEntry head = hashTable[j];
+        while (head != null) {
+            if (head.getKey().equals(key)) {
+                head.setValue(value);
+                return;
             }
-
-        } while (i < slots);
-
-        return -1;
+            head = head.next;
+        }
+        ++size;
+        head = hashTable[j];
+        HashEntry<K, V> newElement = new HashEntry<>(key, value);
+        newElement.next = head;
+        hashTable[j] = newElement;
     }
 
     /**
      * @param key Key being searched from the HashMember[] table
      * @return slot value the key is in
      */
-    public int search(K key) {
-        int i = 0;
-        int j;
-        do {
-            j = Math.abs(key.hashCode() % slots);
-            if (table[j] != null) {
-                if (table[j].getKey().equals(key)) {
-                    return j;
-                }
+    public V search(K key) {
+        int j = Math.abs(key.hashCode() % slots);
+
+        HashEntry<K, V> head = hashTable[j];
+
+        while (head != null) {
+            if (head.getKey().equals(key)) {
+                return head.getValue();
             }
-            i++;
-        } while (table[j] != null || i < slots);
-        return -1;
+            head = head.next;
+        }
+        return null;
     }
 
     public int getSize() {
         return size;
     }
 
-    public void setSize(int size) {
-        this.size = size;
-    }
-
     /**
      * Method to resize hash table if table is filled up to loadFactor percentage.
      */
     private boolean resize() {
-        if (size < (slots * loadFactor)) {
-            return false;
-        } else {
-            return true;
+        return size >= (slots * loadFactor);
+    }
+
+
+    private static class HashEntry<K, V> {
+
+        private K key;
+        private V value;
+        HashEntry<K, V> next;
+
+        public HashEntry(K key, V value) {
+            this.key = key;
+            this.value = value;
+            next = null;
+        }
+
+        K getKey() {
+            return key;
+        }
+
+        public void setKey(K key) {
+            this.key = key;
+        }
+
+        V getValue() {
+            return value;
+        }
+
+        void setValue(V value) {
+            this.value = value;
         }
     }
 }

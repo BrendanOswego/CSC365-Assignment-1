@@ -27,6 +27,7 @@ public interface RetroInterface {
 
     @GET("data")
     Call<DataModel> getData(@Query("datasetid") String id,
+
                             @Query("locationid")String locationId,
                             @Query("startdate")String startdate,
                             @Query("enddate")String enddate);
