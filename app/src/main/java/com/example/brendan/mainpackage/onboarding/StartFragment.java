@@ -140,7 +140,7 @@ public class StartFragment extends BaseFragment {
     public void contClicked() {
         EventBus.getDefault().post(new StartEvent(concat));
 
-        ((MainActivity) getActivity()).navigatToEndDate();
+        ((MainActivity) getActivity()).navigateToMain();
     }
 
 }

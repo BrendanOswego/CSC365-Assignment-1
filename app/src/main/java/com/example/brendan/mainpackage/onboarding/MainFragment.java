@@ -138,7 +138,7 @@ public class MainFragment extends BaseFragment {
 
     @Subscribe
     public void onLocationEvent(LocationEvent event) {
-        if (startTime != null && endTime != null) {
+        if (startTime != null) {
             if (event.getUuid().equals(this.locationUUID)) {
                 ArrayList<String> stateList = new ArrayList<>();
                 List<Result> locationResults = event.getLocation().getResults();
@@ -165,7 +165,7 @@ public class MainFragment extends BaseFragment {
 
     @Subscribe
     public void onDataEvent(DataEvent event) {
-        if(event.getUuid().equals(this.dataResultsUUID)) {
+        if (event.getUuid().equals(this.dataResultsUUID)) {
             dataResults = event.getDataModel().getResults();
             Metadata md = event.getDataModel().getMetadata();
             if (dataResults != null) {
@@ -202,7 +202,7 @@ public class MainFragment extends BaseFragment {
                 task = new FIPSTask();
                 String[] dates = new String[2];
                 dates[0] = startTime;
-                dates[1] = endTime;
+                dates[1] = startTime;
                 task.setIndex(adapterView.getSelectedItemPosition());
                 task.execute(dates);
             }
