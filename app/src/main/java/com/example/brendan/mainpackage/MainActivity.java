@@ -1,15 +1,11 @@
 package com.example.brendan.mainpackage;
 
-
 import android.support.v4.app.FragmentActivity;
 import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
-
 import com.example.brendan.mainpackage.onboarding.EndFragment;
 import com.example.brendan.mainpackage.onboarding.MainFragment;
 import com.example.brendan.mainpackage.onboarding.StartFragment;
-
-//REMINDER handle overflow of unnecessary information, check if count or limit is smaller
 
 public class MainActivity extends FragmentActivity {
 
@@ -26,20 +22,29 @@ public class MainActivity extends FragmentActivity {
     public void navigateToStartDate() {
         BaseFragment f = new StartFragment();
         FragmentManager m = getSupportFragmentManager();
-        m.beginTransaction().
-                replace(R.id.fragment_container, f, "startFragment")
-                .addToBackStack(null)
-                .commit();
+        if(m.findFragmentByTag("startFragment") == null){
+            m.beginTransaction()
+                    .replace(R.id.fragment_container,f,"startFragment")
+                    .commit();
+        }else {
+            m.beginTransaction()
+                    .replace(R.id.fragment_container, m.findFragmentByTag("startFragment"))
+                    .commit();
+        }
     }
-
 
     public void navigatToEndDate() {
         BaseFragment f = new EndFragment();
         FragmentManager m = getSupportFragmentManager();
-        m.beginTransaction().
-                replace(R.id.fragment_container, f, "endFragment")
-                .addToBackStack(null)
-                .commit();
+        if(m.findFragmentByTag("endFragment") == null){
+            m.beginTransaction()
+                    .replace(R.id.fragment_container,f,"endFragment")
+                    .commit();
+        }else {
+            m.beginTransaction()
+                    .replace(R.id.fragment_container, m.findFragmentByTag("endFragment"))
+                    .commit();
+        }
 
     }
 
@@ -47,10 +52,15 @@ public class MainActivity extends FragmentActivity {
         BaseFragment f = new MainFragment();
         FragmentManager m = getSupportFragmentManager();
 
-        m.beginTransaction().
-                replace(R.id.fragment_container, f, "mainFragment")
-                .addToBackStack(null)
-                .commit();
+        if(m.findFragmentByTag("mainFragment") == null){
+            m.beginTransaction()
+                    .replace(R.id.fragment_container,f,"mainFragment")
+                    .commit();
+        }else {
+            m.beginTransaction()
+                    .replace(R.id.fragment_container, m.findFragmentByTag("mainFragment"))
+                    .commit();
+        }
 
     }
 

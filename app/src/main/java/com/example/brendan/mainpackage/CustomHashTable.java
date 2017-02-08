@@ -85,7 +85,7 @@ public class CustomHashTable<K, V> {
     /**
      * Method to resize hash table if table is filled up to loadFactor percentage.
      */
-    private boolean resize() {
+    private boolean needsToResize() {
         return size >= (slots * loadFactor);
     }
 

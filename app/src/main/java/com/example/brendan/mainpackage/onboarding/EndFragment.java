@@ -1,23 +1,22 @@
 package com.example.brendan.mainpackage.onboarding;
 
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CalendarView;
-
 import com.example.brendan.mainpackage.BaseFragment;
 import com.example.brendan.mainpackage.MainActivity;
 import com.example.brendan.mainpackage.R;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import butterknife.Unbinder;
 
-
+//TODO Take selected date and take as Bundle argument in MainFragment
 public class EndFragment extends BaseFragment {
     private static final String TAG = EndFragment.class.getName();
     @BindView(R.id.btn_end)
@@ -83,7 +82,7 @@ public class EndFragment extends BaseFragment {
 
     CalendarView.OnDateChangeListener dateListener = new CalendarView.OnDateChangeListener() {
         @Override
-        public void onSelectedDayChange(CalendarView calendarView, int year, int month, int day) {
+        public void onSelectedDayChange(@NonNull CalendarView view, int year, int month, int day) {
             daySelected = String.valueOf(day);
             monthSelected = String.valueOf(month);
             endButton.setEnabled(true);

@@ -8,7 +8,7 @@ import android.os.Message;
 import android.support.v4.app.Fragment;
 
 /**
- * Created by brendan on 2/1/17.
+ * Base Fragment class for All application fragments
  */
 
 public class BaseFragment extends Fragment {

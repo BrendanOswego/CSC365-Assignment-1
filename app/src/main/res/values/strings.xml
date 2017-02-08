@@ -10,4 +10,5 @@
     <string name="start_date_title">Please Select Start Date:</string>
     <string name="cont">Continue</string>
     <string name="new_search">Create New Search</string>
+    <string name="view_graph">View Graph</string>
 </resources>

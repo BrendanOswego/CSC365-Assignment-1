@@ -1,30 +1,20 @@
 package com.example.brendan.mainpackage.onboarding;
 
-
-import android.icu.text.SimpleDateFormat;
-import android.icu.util.Calendar;
-import android.os.Build;
 import android.os.Bundle;
-import android.support.annotation.RequiresApi;
-import android.util.Log;
+import android.support.annotation.NonNull;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CalendarView;
-
 import com.example.brendan.mainpackage.BaseFragment;
-
 import com.example.brendan.mainpackage.MainActivity;
 import com.example.brendan.mainpackage.R;
-
-import java.util.Date;
-
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import butterknife.Unbinder;
-
+//TODO Take selected date and take as Bundle argument in MainFragment
 public class StartFragment extends BaseFragment {
     private static final String TAG = StartFragment.class.getName();
 
@@ -92,7 +82,7 @@ public class StartFragment extends BaseFragment {
 
     CalendarView.OnDateChangeListener dateListener = new CalendarView.OnDateChangeListener() {
         @Override
-        public void onSelectedDayChange(CalendarView view, int year, int month, int day) {
+        public void onSelectedDayChange(@NonNull CalendarView view, int year, int month, int day) {
             startButton.setEnabled(true);
             startButton.setBackgroundColor(getResources().getColor(R.color.enabled));
             daySelected = String.valueOf(day);

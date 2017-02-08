@@ -3,6 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:id="@+id/frame_main"
     >
 
 
@@ -18,28 +19,37 @@
             android:textSize="20sp"
             android:text="@string/welcome_message" />
         <LinearLayout
-            android:clickable="true"
-            android:focusable="true"
-            android:id="@+id/view_new_search"
-            android:padding="5dp"
-            android:background="@color/enabled"
             android:orientation="horizontal"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content">
-
-            <ImageView
+            <LinearLayout
                 android:layout_gravity="center_vertical"
-                android:src="@drawable/icon_refresh"
-                android:layout_width="20dp"
-                android:layout_height="20dp" />
-            <TextView
-                android:layout_marginLeft="10dp"
-                android:layout_gravity="center_vertical"
-                android:text="@string/new_search"
+                android:clickable="true"
+                android:focusable="true"
+                android:id="@+id/view_new_search"
+                android:padding="5dp"
+                android:background="@color/enabled"
+                android:orientation="horizontal"
                 android:layout_width="wrap_content"
-                android:layout_height="wrap_content" />
+                android:layout_height="40dp">
 
+                <ImageView
+                    android:layout_gravity="center_vertical"
+                    android:src="@drawable/icon_refresh"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp" />
+                <TextView
+                    android:textColor="#ffffff"
+                    android:layout_marginLeft="10dp"
+                    android:layout_gravity="center_vertical"
+                    android:text="@string/new_search"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+
+
+            </LinearLayout>
         </LinearLayout>
+
 
 
         <Spinner

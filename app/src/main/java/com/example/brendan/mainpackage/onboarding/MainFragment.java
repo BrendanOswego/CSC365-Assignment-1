@@ -7,6 +7,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.FrameLayout;
 import android.widget.Spinner;
 
 import com.example.brendan.mainpackage.BaseFragment;
@@ -37,12 +38,14 @@ import butterknife.Unbinder;
  * Fragment class for making API calls, using EventBus to listen for APIClass Event posts.
  * Adding State,Precipitation pairs.
  */
-
+//TODO: only add spinner items is PRCP value is not null
 public class MainFragment extends BaseFragment {
     private static final String TAG = MainFragment.class.getName();
 
     @BindView(R.id.spinner_states)
     Spinner stateSpinner;
+    @BindView(R.id.frame_main)
+    FrameLayout mainFrame;
 
     @BindView(R.id.view_new_search)
     View viewNewSearch;
@@ -51,17 +54,21 @@ public class MainFragment extends BaseFragment {
 
     private UUID locationUUID;
     private UUID dataResultsUUID;
-    CustomHashTable<String, String> locationTable;
-    CustomHashTable<String, Float> table;
+    //Key:State Value:FIPS
+    private CustomHashTable<String, String> locationTable;
+    //Key:FIPS Value:PRCP
+    private CustomHashTable<String, Float> table;
     private List<DataResults> dataResults;
+    private ArrayList<String> stateList;
 
     private int maxData;
-    private static final String start = "2017-01-22";
-    private static final String end = "2017-01-22";
-    private List<String> fipsList;
     private int globalIndex = 0;
+    private static final String start = "2017-01-25";
+    private static final String end = "2017-01-25";
+    private List<String> fipsList;
+    private FIPSTask task;
 
-    APIClass api;
+    private APIClass api;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -78,6 +85,7 @@ public class MainFragment extends BaseFragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.fragment_main, container, false);
         unbinder = ButterKnife.bind(this, view);
+        mainFrame.setVisibility(View.GONE);
         locationUUID = api.getAllStates();
         return view;
     }
@@ -111,13 +119,15 @@ public class MainFragment extends BaseFragment {
     public void onDestroy() {
         super.onDestroy();
         unbinder = null;
+        table = null;
+        locationTable = null;
         EventBus.getDefault().unregister(this);
     }
 
     @Subscribe
     public void onLocationEvent(LocationEvent event) {
         if (event.getUuid().equals(this.locationUUID)) {
-            List<String> statesList = new ArrayList<>();
+            stateList = new ArrayList<>();
             List<Result> locationResults = event.getLocation().getResults();
             Metadata md_location = event.getLocation().getMetadata();
             int i = md_location.getResultset().getCount();
@@ -126,22 +136,22 @@ public class MainFragment extends BaseFragment {
             for (int k = 0; k < count; k++) {
                 if (!fipsList.contains(locationResults.get(k).getId())) {
                     fipsList.add(locationResults.get(k).getId());
-                    statesList.add(locationResults.get(k).getName());
+                    stateList.add(locationResults.get(k).getName());
                     locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
                 }
             }
             ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(getContext(),
-                    android.R.layout.simple_spinner_item, statesList);
+                    android.R.layout.simple_spinner_item, stateList);
             dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
             stateSpinner.setAdapter(dataAdapter);
             stateSpinner.setOnItemSelectedListener(itemListener);
             api.showDialog("Fetching FIPS");
-            FIPSTask task = new FIPSTask();
+            task = new FIPSTask();
+            //TODO Set the start and end dates from the StartFragment and EndFragment arguments
             String[] dates = new String[2];
             dates[0] = start;
             dates[1] = end;
             task.execute(dates);
-
         }
 
     }
@@ -154,10 +164,28 @@ public class MainFragment extends BaseFragment {
             int i = md.getResultset().getCount();
             int j = md.getResultset().getLimit();
             maxData = (i <= j) ? i : j;
-
             postDataEvent(globalIndex);
+            if(task.isFinished()){
+                ArrayList<String> noNullList = new ArrayList<>();
+                for(int x = 0;x< stateList.size();x++){
+                    String fips = locationTable.search(stateList.get(x));
+                    if(table.search(fips) != null) {
+                        noNullList.add(stateList.get(x));
+                        float prcp =table.search(fips);
+                        System.out.println("FIPS ID: " + fips + "PRCP: "+prcp);
+                    }
 
+                }
+                ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(getContext(),
+                        android.R.layout.simple_spinner_item, noNullList);
+                dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                stateSpinner.setAdapter(dataAdapter);
+                stateSpinner.setOnItemSelectedListener(itemListener);
+                mainFrame.setVisibility(View.VISIBLE);
+            }
         }
+
+
     }
 
     AdapterView.OnItemSelectedListener itemListener = new AdapterView.OnItemSelectedListener() {
@@ -173,10 +201,12 @@ public class MainFragment extends BaseFragment {
 
         }
     };
+
     @OnClick(R.id.view_new_search)
-    public void navigateBeginning(){
-        ((MainActivity)getActivity()).navigateToStartDate();
+    public void navigateBeginning() {
+        ((MainActivity) getActivity()).navigateToStartDate();
     }
+
 
     private void postDataEvent(int fipsIndex) {
         float total = 0;
@@ -191,7 +221,6 @@ public class MainFragment extends BaseFragment {
         total = total / prcpStations;
         table.insert(fipsList.get(fipsIndex), total);
         foo(fipsIndex);
-
     }
 
     void foo(int index) {
@@ -206,6 +235,7 @@ public class MainFragment extends BaseFragment {
 
 
     private class FIPSTask extends AsyncTask<String, Void, Void> {
+        private boolean finished = false;
 
         @Override
         protected Void doInBackground(String... strings) {
@@ -215,19 +245,23 @@ public class MainFragment extends BaseFragment {
                     postLocationEvent(l, strings[0], strings[1]);
                 } else {
                     try {
-                        Thread.sleep(1500);
+                        Thread.sleep(1700);
+                        postLocationEvent(l, strings[0], strings[1]);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
-                if (l % 5 == 0) {
-                    postLocationEvent(l, strings[0], strings[1]);
-                }
                 l++;
             }
             api.closeDialog();
+            finished = true;
             return null;
         }
+
+        boolean isFinished() {
+            return finished;
+        }
+
     }
 
 
