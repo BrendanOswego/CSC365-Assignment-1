@@ -73,11 +73,8 @@ public class MainFragment extends BaseFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        fipsList = new ArrayList<>();
-        locationTable = new CustomHashTable<>();
-        table = new CustomHashTable<>();
-        api = APIClass.getInstance();
-        api.init(getActivity());
+        setRetainInstance(true);
+
         EventBus.getDefault().register(this);
     }
 
@@ -85,8 +82,15 @@ public class MainFragment extends BaseFragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.fragment_main, container, false);
         unbinder = ButterKnife.bind(this, view);
-        mainFrame.setVisibility(View.GONE);
-        locationUUID = api.getAllStates();
+        if (savedInstanceState == null) {
+            fipsList = new ArrayList<>();
+            locationTable = new CustomHashTable<>();
+            table = new CustomHashTable<>();
+            api = APIClass.getInstance();
+            api.init(getActivity());
+            mainFrame.setVisibility(View.GONE);
+            locationUUID = api.getAllStates();
+        }
         return view;
     }
 
@@ -165,14 +169,14 @@ public class MainFragment extends BaseFragment {
             int j = md.getResultset().getLimit();
             maxData = (i <= j) ? i : j;
             postDataEvent(globalIndex);
-            if(task.isFinished()){
+            if (task.isFinished()) {
                 ArrayList<String> noNullList = new ArrayList<>();
-                for(int x = 0;x< stateList.size();x++){
+                for (int x = 0; x < stateList.size(); x++) {
                     String fips = locationTable.search(stateList.get(x));
-                    if(table.search(fips) != null) {
+                    if (table.search(fips) != null) {
                         noNullList.add(stateList.get(x));
-                        float prcp =table.search(fips);
-                        System.out.println("FIPS ID: " + fips + "PRCP: "+prcp);
+                        float prcp = table.search(fips);
+                        System.out.println("FIPS ID: " + fips + "PRCP: " + prcp);
                     }
 
                 }

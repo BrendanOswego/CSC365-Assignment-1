@@ -8,9 +8,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CalendarView;
+
 import com.example.brendan.mainpackage.BaseFragment;
 import com.example.brendan.mainpackage.MainActivity;
 import com.example.brendan.mainpackage.R;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
@@ -19,6 +21,7 @@ import butterknife.Unbinder;
 //TODO Take selected date and take as Bundle argument in MainFragment
 public class EndFragment extends BaseFragment {
     private static final String TAG = EndFragment.class.getName();
+
     @BindView(R.id.btn_end)
     Button endButton;
 
@@ -35,13 +38,13 @@ public class EndFragment extends BaseFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
+        setRetainInstance(true);
     }
 
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.fragment_end, container, false);
-        unbinder = ButterKnife.bind(this,view);
+        unbinder = ButterKnife.bind(this, view);
         endButton.setEnabled(false);
         endButton.setBackgroundColor(getResources().getColor(R.color.disabled));
         endCalendar.setOnDateChangeListener(dateListener);
@@ -88,13 +91,13 @@ public class EndFragment extends BaseFragment {
             endButton.setEnabled(true);
             endButton.setBackgroundColor(getResources().getColor(R.color.enabled));
             yearSelected = String.valueOf(year);
-            concat = yearSelected+ "-" + monthSelected+ "-" + daySelected;
-            Log.v(TAG,concat);
+            concat = yearSelected + "-" + monthSelected + "-" + daySelected;
+            Log.v(TAG, concat);
         }
     };
 
     @OnClick(R.id.btn_end)
-    public void contClicked(){
-        ((MainActivity)getActivity()).navigateToMain();
+    public void contClicked() {
+        ((MainActivity) getActivity()).navigateToMain();
     }
 }
