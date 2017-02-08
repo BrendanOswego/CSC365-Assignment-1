@@ -9,6 +9,7 @@ import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import com.example.brendan.mainpackage.BaseFragment;
 import com.example.brendan.mainpackage.CustomHashTable;
@@ -41,7 +42,7 @@ import butterknife.Unbinder;
  * Adding State,Precipitation pairs.
  * PRCP is in hundredths of an inch
  */
-//TODO: only add spinner items is PRCP value is not null
+//TODO Check data from time frame and see if null. If it is, remove it from the spinner
 public class MainFragment extends BaseFragment {
     private static final String TAG = MainFragment.class.getName();
 
@@ -62,9 +63,7 @@ public class MainFragment extends BaseFragment {
     //Key:FIPS Value:PRCP
     private CustomHashTable<String, Double> table;
     private List<DataResults> dataResults;
-    private ArrayList<String> stateList;
 
-    ArrayList<String> noNullList;
     private int maxData;
     private int globalIndex = 0;
     private String startTime;
@@ -78,7 +77,6 @@ public class MainFragment extends BaseFragment {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setRetainInstance(true);
-
         EventBus.getDefault().register(this);
     }
 
@@ -87,15 +85,17 @@ public class MainFragment extends BaseFragment {
         final View view = inflater.inflate(R.layout.fragment_main, container, false);
         unbinder = ButterKnife.bind(this, view);
         if (savedInstanceState == null) {
-            startTime = ((MainActivity)getActivity()).getStartTime();
-            endTime = ((MainActivity)getActivity()).getEndTime();
+            System.out.println("SavedInstanceState is NULL");
+            startTime = ((MainActivity) getActivity()).getStartTime();
+            endTime = ((MainActivity) getActivity()).getEndTime();
             fipsList = new ArrayList<>();
             locationTable = new CustomHashTable<>();
             table = new CustomHashTable<>();
             api = APIClass.getInstance();
             api.init(getActivity());
-            mainFrame.setVisibility(View.GONE);
             locationUUID = api.getAllStates();
+        } else {
+            System.out.println("SavedInstanceState is NOT NULL PROBLEM");
         }
         return view;
     }
@@ -128,6 +128,7 @@ public class MainFragment extends BaseFragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
+        System.out.println("Calling OnDestroy");
         unbinder = null;
         table = null;
         locationTable = null;
@@ -135,12 +136,11 @@ public class MainFragment extends BaseFragment {
     }
 
 
-
     @Subscribe
     public void onLocationEvent(LocationEvent event) {
-        if(startTime != null && endTime != null) {
+        if (startTime != null && endTime != null) {
             if (event.getUuid().equals(this.locationUUID)) {
-                stateList = new ArrayList<>();
+                ArrayList<String> stateList = new ArrayList<>();
                 List<Result> locationResults = event.getLocation().getResults();
                 Metadata md_location = event.getLocation().getMetadata();
                 int i = md_location.getResultset().getCount();
@@ -158,13 +158,6 @@ public class MainFragment extends BaseFragment {
                 dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 stateSpinner.setAdapter(dataAdapter);
                 stateSpinner.setOnItemSelectedListener(itemListener);
-                api.showDialog("Fetching FIPS");
-                task = new FIPSTask();
-                //TODO Set the start and end dates from the StartFragment and EndFragment arguments
-                String[] dates = new String[2];
-                dates[0] = startTime;
-                dates[1] = endTime;
-                task.execute(dates);
             }
         }
 
@@ -172,48 +165,48 @@ public class MainFragment extends BaseFragment {
 
     @Subscribe
     public void onDataEvent(DataEvent event) {
-        if (event.getUuid().equals(dataResultsUUID)) {
+        if(event.getUuid().equals(this.dataResultsUUID)) {
             dataResults = event.getDataModel().getResults();
             Metadata md = event.getDataModel().getMetadata();
-            int i = md.getResultset().getCount();
-            int j = md.getResultset().getLimit();
-            maxData = (i <= j) ? i : j;
-            postDataEvent(globalIndex);
-            if (task.isFinished()) {
-                noNullList = new ArrayList<>();
-                for (int x = 0; x < stateList.size(); x++) {
-                    String fips = locationTable.search(stateList.get(x));
-                    if (table.search(fips) != null) {
-                        noNullList.add(stateList.get(x));
-                        double prcp = table.search(fips);
-                        System.out.println("FIPS ID: " + fips + "PRCP: " + prcp);
+            if (dataResults != null) {
+                int i = md.getResultset().getCount();
+                int j = md.getResultset().getLimit();
+                maxData = (i <= j) ? i : j;
+                double total = 0;
+                int prcpStations = 0;
+                for (int y = 0; y < maxData; y++) {
+                    if (dataResults.get(y).getDatatype().equals("PRCP")) {
+                        total += dataResults.get(y).getValue();
+                        System.out.println("TOTAL IN LOOP: " + total);
+                        ++prcpStations;
                     }
-
                 }
-                ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(getContext(),
-                        android.R.layout.simple_spinner_item, noNullList);
-                dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                stateSpinner.setAdapter(dataAdapter);
-                stateSpinner.setOnItemSelectedListener(itemListener);
-                mainFrame.setVisibility(View.VISIBLE);
+                total = total / prcpStations;
+                table.insert(fipsList.get(globalIndex), total);
+                Toast.makeText(getContext(), "Total: " + total, Toast.LENGTH_SHORT).show();
+
+                if (task.isFinished()) {
+                    postDataEvent(task.getIndex());
+                }
             }
         }
-
-
     }
 
     AdapterView.OnItemSelectedListener itemListener = new AdapterView.OnItemSelectedListener() {
+        int count = 0;
+
         @Override
         public void onItemSelected(AdapterView<?> adapterView, View view, int a, long b) {
-            String fips = locationTable.search((String) adapterView.getSelectedItem());
-            double fipsDouble = table.search(fips);
-            double mostSimilar;
-            System.out.println("PRCP FOR " + adapterView.getSelectedItem() + " is " + fipsDouble);
-//            for(int i = 0;i<noNullList.size();i++){
-//                for(int j = i + 1;j<noNullList.size();j++){
-//
-//                }
-//            }
+            if (count >= 1) {
+                api.showDialog("Fetching Information");
+                task = new FIPSTask();
+                String[] dates = new String[2];
+                dates[0] = startTime;
+                dates[1] = endTime;
+                task.setIndex(adapterView.getSelectedItemPosition());
+                task.execute(dates);
+            }
+            count++;
         }
 
         @Override
@@ -229,23 +222,19 @@ public class MainFragment extends BaseFragment {
 
 
     private void postDataEvent(int fipsIndex) {
+        System.out.println("Calling POST DATA EVENT");
         double total = 0;
         int prcpStations = 0;
-
         for (int i = 0; i < maxData; i++) {
-            if (dataResults.get(i).getDatatype().equalsIgnoreCase("PRCP")) {
+            if (dataResults.get(i).getDatatype().equals("PRCP")) {
                 total += dataResults.get(i).getValue();
                 ++prcpStations;
             }
         }
         total = total / prcpStations;
+        System.out.println("Total for index " + fipsIndex + "==" + total);
         table.insert(fipsList.get(fipsIndex), total);
-        foo(fipsIndex);
-    }
 
-    void foo(int index) {
-        double test = table.search(fipsList.get(index));
-        System.out.println(fipsList.get(index) + ": " + test);
     }
 
     private void postLocationEvent(int index, String start, String end) {
@@ -256,23 +245,11 @@ public class MainFragment extends BaseFragment {
 
     private class FIPSTask extends AsyncTask<String, Void, Void> {
         private boolean finished = false;
+        int index = 0;
 
         @Override
         protected Void doInBackground(String... strings) {
-            int l = 0;
-            while (l < fipsList.size()) {
-                if (l % 5 != 0) {
-                    postLocationEvent(l, strings[0], strings[1]);
-                } else {
-                    try {
-                        Thread.sleep(1700);
-                        postLocationEvent(l, strings[0], strings[1]);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-                l++;
-            }
+            postLocationEvent(index, strings[0], strings[1]);
             api.closeDialog();
             finished = true;
             return null;
@@ -282,19 +259,13 @@ public class MainFragment extends BaseFragment {
             return finished;
         }
 
+        public void setIndex(int index) {
+            this.index = index;
+        }
+
+        public int getIndex() {
+            return index;
+        }
+
     }
-
-    private double cosineSimilarity(double vec1, double vec2) {
-        double dotProduct = 0.0;
-        double sum1;
-        double sum2;
-
-        dotProduct += vec1 * vec2;
-        sum1 = Math.pow(vec1, 2);
-        sum2 = Math.pow(vec2, 2);
-
-        return (dotProduct / (Math.sqrt(sum1) * Math.sqrt(sum2)));
-    }
-
-
 }
