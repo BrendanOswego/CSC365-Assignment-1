@@ -25,7 +25,7 @@ public interface RetroInterface {
     @GET("datasets?limit=25")
     Call<DataSetModel> getDataSets();
 
-    @GET("data?limit=1000")
+    @GET("data?limit=200")
     Call<DataModel> getData(@Query("datasetid") String id,
 
                             @Query("locationid")String locationId,

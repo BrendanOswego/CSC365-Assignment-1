@@ -13,6 +13,7 @@ import android.widget.Toast;
 
 import com.example.brendan.mainpackage.BaseFragment;
 import com.example.brendan.mainpackage.CustomHashTable;
+import com.example.brendan.mainpackage.EastCoastList;
 import com.example.brendan.mainpackage.MainActivity;
 import com.example.brendan.mainpackage.R;
 import com.example.brendan.mainpackage.api.APIClass;
@@ -30,6 +31,7 @@ import org.greenrobot.eventbus.Subscribe;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -63,6 +65,7 @@ public class MainFragment extends BaseFragment {
     //Key:FIPS Value:PRCP
     private CustomHashTable<String, Double> table;
     private List<DataResults> dataResults;
+    EastCoastList ecList = new EastCoastList();
 
     private int maxData;
     private int globalIndex = 0;
@@ -148,9 +151,13 @@ public class MainFragment extends BaseFragment {
                 int count = (i <= j) ? i : j;
                 for (int k = 0; k < count; k++) {
                     if (!fipsList.contains(locationResults.get(k).getId())) {
-                        fipsList.add(locationResults.get(k).getId());
-                        stateList.add(locationResults.get(k).getName());
-                        locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
+                        for (int x = 0; x < ecList.size(); x++) {
+                            if (ecList.getList().get(x).equals(locationResults.get(k).getName())) {
+                                fipsList.add(locationResults.get(k).getId());
+                                stateList.add(locationResults.get(k).getName());
+                                locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
+                            }
+                        }
                     }
                 }
                 ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(getContext(),
@@ -177,17 +184,17 @@ public class MainFragment extends BaseFragment {
                 for (int y = 0; y < maxData; y++) {
                     if (dataResults.get(y).getDatatype().equals("PRCP")) {
                         total += dataResults.get(y).getValue();
-                        System.out.println("TOTAL IN LOOP: " + total);
+                        //System.out.println("TOTAL IN LOOP: " + total);
                         ++prcpStations;
                     }
                 }
                 total = total / prcpStations;
                 table.insert(fipsList.get(globalIndex), total);
-                Toast.makeText(getContext(), "Total: " + total, Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getContext(), "Total: " + total, Toast.LENGTH_SHORT).show();
+                postDataEvent(globalIndex);
 
-                if (task.isFinished()) {
-                    postDataEvent(task.getIndex());
-                }
+            }else{
+                System.out.println("DATA RESULT NULL");
             }
         }
     }
@@ -248,8 +255,30 @@ public class MainFragment extends BaseFragment {
         int index = 0;
 
         @Override
-        protected Void doInBackground(String... strings) {
-            postLocationEvent(index, strings[0], strings[1]);
+        protected Void doInBackground(final String... strings) {
+
+            int l = 0;
+            while (l < ecList.size()) {
+                if (l % 5 == 0) {
+                    postLocationEvent(l, strings[0], strings[1]);
+                    try {
+                        Thread.sleep(1400);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                if (l % 5 != 0) {
+                    postLocationEvent(l, strings[0], strings[1]);
+                    try {
+                        Thread.sleep(700);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                l++;
+            }
+
+
             api.closeDialog();
             finished = true;
             return null;
