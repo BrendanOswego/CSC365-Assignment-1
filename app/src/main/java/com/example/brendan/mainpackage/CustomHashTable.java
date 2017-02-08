@@ -14,7 +14,7 @@ public class CustomHashTable<K, V> {
     private float loadFactor;
     private int slots;
     private int size;
-    private HashEntry<K,V>[] hashTable;
+    private HashEntry<K, V>[] hashTable;
 
 
     /**
@@ -28,14 +28,22 @@ public class CustomHashTable<K, V> {
         this.slots = slots;
         size = 0;
         loadFactor = .75f;
-        hashTable = (HashEntry<K,V>[])new HashEntry[slots];
+        hashTable = (HashEntry<K, V>[]) new HashEntry[slots];
+        //Make sure all elements are null from beginning
+        for (int i = 0; i < slots; i++) {
+            hashTable[i] = null;
+        }
     }
 
     public CustomHashTable() {
         size = 0;
         this.slots = 128;
         loadFactor = .75f;
-        hashTable = (HashEntry<K,V>[])new HashEntry[slots];
+        hashTable = (HashEntry<K, V>[]) new HashEntry[slots];
+        //Make sure all elements are null from beginning
+        for (int i = 0; i < slots; i++) {
+            hashTable[i] = null;
+        }
     }
 
     /**
@@ -43,21 +51,43 @@ public class CustomHashTable<K, V> {
      * @param value Value that key will store
      */
     public void insert(K key, V value) {
-
         int j = Math.abs(key.hashCode() % slots);
         HashEntry head = hashTable[j];
-        while (head != null) {
-            if (head.getKey().equals(key)) {
-                head.setValue(value);
-                return;
+        HashEntry toAdd = new HashEntry(key, value);
+        if (head == null) {
+            hashTable[j] = toAdd;
+            ++size;
+        } else {
+            while (head != null) {
+                if (head.getKey().equals(key)) {
+                    head.setValue(value);
+                    ++size;
+                    break;
+                }
+                head = head.next;
             }
-            head = head.next;
+            if (head == null) {
+                head = hashTable[j];
+                toAdd.next = head;
+                hashTable[j] = toAdd;
+                ++size;
+            }
         }
-        ++size;
-        head = hashTable[j];
-        HashEntry<K, V> newElement = new HashEntry<>(key, value);
-        newElement.next = head;
-        hashTable[j] = newElement;
+        if ((size * loadFactor) >= slots) {
+            //Rehash
+            HashEntry[] newTable = hashTable;
+            slots = slots * 2;
+            for (int i = 0; i < slots; i++) {
+                hashTable[i] = null;
+            }
+            for (HashEntry newHead : newTable) {
+                while (newHead != null) {
+                    insert((K) newHead.getKey(), (V) newHead.getValue());
+                    newHead = newHead.next;
+                }
+            }
+        }
+
     }
 
     /**
@@ -76,6 +106,39 @@ public class CustomHashTable<K, V> {
             head = head.next;
         }
         return null;
+    }
+
+    /**
+     * @param key Generic Key
+     * @return
+     */
+    public V remove(K key) {
+
+        int j = key.hashCode() % slots;
+        HashEntry head = hashTable[j];
+        if (head == null) {
+            return null;
+        }
+        if (head.getKey().equals(key)) {
+            V value = (V) head.getValue();
+            head = head.next;
+            hashTable[j] = head;
+            --size;
+            return value;
+        } else {
+            HashEntry next = null;
+            while (head != null) {
+                if (head.getKey().equals(key)) {
+                    next.next = head.next;
+                    --size;
+                    return (V) head.getValue();
+                }
+                next = head;
+                head = head.next;
+            }
+            --size;
+            return null;
+        }
     }
 
     public int getSize() {

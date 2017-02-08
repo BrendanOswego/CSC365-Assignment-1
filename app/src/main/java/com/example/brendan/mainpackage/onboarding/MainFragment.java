@@ -16,7 +16,9 @@ import com.example.brendan.mainpackage.MainActivity;
 import com.example.brendan.mainpackage.R;
 import com.example.brendan.mainpackage.api.APIClass;
 import com.example.brendan.mainpackage.event.DataEvent;
+import com.example.brendan.mainpackage.event.EndEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
+import com.example.brendan.mainpackage.event.StartEvent;
 import com.example.brendan.mainpackage.model.DataResults;
 import com.example.brendan.mainpackage.model.Metadata;
 import com.example.brendan.mainpackage.model.Result;
@@ -37,6 +39,7 @@ import butterknife.Unbinder;
 /**
  * Fragment class for making API calls, using EventBus to listen for APIClass Event posts.
  * Adding State,Precipitation pairs.
+ * PRCP is in hundredths of an inch
  */
 //TODO: only add spinner items is PRCP value is not null
 public class MainFragment extends BaseFragment {
@@ -57,14 +60,15 @@ public class MainFragment extends BaseFragment {
     //Key:State Value:FIPS
     private CustomHashTable<String, String> locationTable;
     //Key:FIPS Value:PRCP
-    private CustomHashTable<String, Float> table;
+    private CustomHashTable<String, Double> table;
     private List<DataResults> dataResults;
     private ArrayList<String> stateList;
 
+    ArrayList<String> noNullList;
     private int maxData;
     private int globalIndex = 0;
-    private static final String start = "2017-01-25";
-    private static final String end = "2017-01-25";
+    private String startTime;
+    private String endTime;
     private List<String> fipsList;
     private FIPSTask task;
 
@@ -83,6 +87,8 @@ public class MainFragment extends BaseFragment {
         final View view = inflater.inflate(R.layout.fragment_main, container, false);
         unbinder = ButterKnife.bind(this, view);
         if (savedInstanceState == null) {
+            startTime = ((MainActivity)getActivity()).getStartTime();
+            endTime = ((MainActivity)getActivity()).getEndTime();
             fipsList = new ArrayList<>();
             locationTable = new CustomHashTable<>();
             table = new CustomHashTable<>();
@@ -128,34 +134,38 @@ public class MainFragment extends BaseFragment {
         EventBus.getDefault().unregister(this);
     }
 
+
+
     @Subscribe
     public void onLocationEvent(LocationEvent event) {
-        if (event.getUuid().equals(this.locationUUID)) {
-            stateList = new ArrayList<>();
-            List<Result> locationResults = event.getLocation().getResults();
-            Metadata md_location = event.getLocation().getMetadata();
-            int i = md_location.getResultset().getCount();
-            int j = md_location.getResultset().getLimit();
-            int count = (i <= j) ? i : j;
-            for (int k = 0; k < count; k++) {
-                if (!fipsList.contains(locationResults.get(k).getId())) {
-                    fipsList.add(locationResults.get(k).getId());
-                    stateList.add(locationResults.get(k).getName());
-                    locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
+        if(startTime != null && endTime != null) {
+            if (event.getUuid().equals(this.locationUUID)) {
+                stateList = new ArrayList<>();
+                List<Result> locationResults = event.getLocation().getResults();
+                Metadata md_location = event.getLocation().getMetadata();
+                int i = md_location.getResultset().getCount();
+                int j = md_location.getResultset().getLimit();
+                int count = (i <= j) ? i : j;
+                for (int k = 0; k < count; k++) {
+                    if (!fipsList.contains(locationResults.get(k).getId())) {
+                        fipsList.add(locationResults.get(k).getId());
+                        stateList.add(locationResults.get(k).getName());
+                        locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
+                    }
                 }
+                ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(getContext(),
+                        android.R.layout.simple_spinner_item, stateList);
+                dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                stateSpinner.setAdapter(dataAdapter);
+                stateSpinner.setOnItemSelectedListener(itemListener);
+                api.showDialog("Fetching FIPS");
+                task = new FIPSTask();
+                //TODO Set the start and end dates from the StartFragment and EndFragment arguments
+                String[] dates = new String[2];
+                dates[0] = startTime;
+                dates[1] = endTime;
+                task.execute(dates);
             }
-            ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(getContext(),
-                    android.R.layout.simple_spinner_item, stateList);
-            dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-            stateSpinner.setAdapter(dataAdapter);
-            stateSpinner.setOnItemSelectedListener(itemListener);
-            api.showDialog("Fetching FIPS");
-            task = new FIPSTask();
-            //TODO Set the start and end dates from the StartFragment and EndFragment arguments
-            String[] dates = new String[2];
-            dates[0] = start;
-            dates[1] = end;
-            task.execute(dates);
         }
 
     }
@@ -170,12 +180,12 @@ public class MainFragment extends BaseFragment {
             maxData = (i <= j) ? i : j;
             postDataEvent(globalIndex);
             if (task.isFinished()) {
-                ArrayList<String> noNullList = new ArrayList<>();
+                noNullList = new ArrayList<>();
                 for (int x = 0; x < stateList.size(); x++) {
                     String fips = locationTable.search(stateList.get(x));
                     if (table.search(fips) != null) {
                         noNullList.add(stateList.get(x));
-                        float prcp = table.search(fips);
+                        double prcp = table.search(fips);
                         System.out.println("FIPS ID: " + fips + "PRCP: " + prcp);
                     }
 
@@ -194,10 +204,16 @@ public class MainFragment extends BaseFragment {
 
     AdapterView.OnItemSelectedListener itemListener = new AdapterView.OnItemSelectedListener() {
         @Override
-        public void onItemSelected(AdapterView<?> adapterView, View view, int i, long l) {
+        public void onItemSelected(AdapterView<?> adapterView, View view, int a, long b) {
             String fips = locationTable.search((String) adapterView.getSelectedItem());
-            Float test = table.search(fips);
-            System.out.println("PRCP FOR " + adapterView.getSelectedItem() + " is " + test);
+            double fipsDouble = table.search(fips);
+            double mostSimilar;
+            System.out.println("PRCP FOR " + adapterView.getSelectedItem() + " is " + fipsDouble);
+//            for(int i = 0;i<noNullList.size();i++){
+//                for(int j = i + 1;j<noNullList.size();j++){
+//
+//                }
+//            }
         }
 
         @Override
@@ -213,7 +229,7 @@ public class MainFragment extends BaseFragment {
 
 
     private void postDataEvent(int fipsIndex) {
-        float total = 0;
+        double total = 0;
         int prcpStations = 0;
 
         for (int i = 0; i < maxData; i++) {
@@ -228,7 +244,7 @@ public class MainFragment extends BaseFragment {
     }
 
     void foo(int index) {
-        Float test = table.search(fipsList.get(index));
+        double test = table.search(fipsList.get(index));
         System.out.println(fipsList.get(index) + ": " + test);
     }
 
@@ -266,6 +282,18 @@ public class MainFragment extends BaseFragment {
             return finished;
         }
 
+    }
+
+    private double cosineSimilarity(double vec1, double vec2) {
+        double dotProduct = 0.0;
+        double sum1;
+        double sum2;
+
+        dotProduct += vec1 * vec2;
+        sum1 = Math.pow(vec1, 2);
+        sum2 = Math.pow(vec2, 2);
+
+        return (dotProduct / (Math.sqrt(sum1) * Math.sqrt(sum2)));
     }
 
 

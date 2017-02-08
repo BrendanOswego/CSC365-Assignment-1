@@ -1,5 +1,6 @@
 package com.example.brendan.mainpackage.onboarding;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.view.LayoutInflater;
@@ -7,13 +8,22 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CalendarView;
+
 import com.example.brendan.mainpackage.BaseFragment;
 import com.example.brendan.mainpackage.MainActivity;
 import com.example.brendan.mainpackage.R;
+import com.example.brendan.mainpackage.event.StartEvent;
+
+import org.greenrobot.eventbus.EventBus;
+
+import java.util.Calendar;
+import java.util.Date;
+
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import butterknife.Unbinder;
+
 //TODO Take selected date and take as Bundle argument in MainFragment
 public class StartFragment extends BaseFragment {
     private static final String TAG = StartFragment.class.getName();
@@ -44,7 +54,7 @@ public class StartFragment extends BaseFragment {
         startButton.setEnabled(false);
         startButton.setBackgroundColor(getResources().getColor(R.color.disabled));
         startCalendar.setOnDateChangeListener(dateListener);
-        startCalendar.setDate(System.currentTimeMillis(),false,true);
+        startCalendar.setDate(System.currentTimeMillis(), false, true);
         return view;
     }
 
@@ -81,23 +91,56 @@ public class StartFragment extends BaseFragment {
 
 
     CalendarView.OnDateChangeListener dateListener = new CalendarView.OnDateChangeListener() {
+        @SuppressLint("DefaultLocale")
         @Override
         public void onSelectedDayChange(@NonNull CalendarView view, int year, int month, int day) {
-            startButton.setEnabled(true);
-            startButton.setBackgroundColor(getResources().getColor(R.color.enabled));
-            daySelected = String.valueOf(day);
-            monthSelected = String.valueOf(month);
-            yearSelected = String.valueOf(year);
-            concat = yearSelected+ "-" + monthSelected+ "-" + daySelected;
-            System.out.println(concat);
+
+            Date date = new Date();
+            Calendar cal = Calendar.getInstance();
+            cal.setTime(date);
+            int currentMonth = cal.get(Calendar.MONTH);
+            int currentDay = cal.get(Calendar.DAY_OF_MONTH);
+            int currentYear = cal.get(Calendar.YEAR);
+            if(currentYear >= year){
+                if((year < currentYear) || ((currentMonth == month) && (currentDay >= day))
+                        || (month < currentMonth)){
+                    startButton.setEnabled(true);
+                    startButton.setBackgroundColor(getResources().getColor(R.color.enabled));
+                    if (month <= 10) {
+                        monthSelected = String.format("%02d", month + 1);
+                    } else {
+                        monthSelected = String.valueOf(month + 1);
+                    }
+                    if (day < 10) {
+                        daySelected = String.format("%02d", day);
+                    } else {
+                        daySelected = String.valueOf(day);
+                    }
+                    yearSelected = String.valueOf(year);
+                    concat = yearSelected + "-" + monthSelected + "-" + daySelected;
+                    System.out.println(concat);
+                    ((MainActivity) getActivity()).setStartDay(day);
+                    ((MainActivity) getActivity()).setStartMonth(month + 1);
+                    ((MainActivity) getActivity()).setStartYear(year);
+                } else {
+                    startButton.setEnabled(false);
+                    startButton.setBackgroundColor(getResources().getColor(R.color.disabled));
+                }
+            } else {
+                startButton.setEnabled(false);
+                startButton.setBackgroundColor(getResources().getColor(R.color.disabled));
+            }
+
+
         }
 
     };
 
     @OnClick(R.id.btn_start)
-    public void contClicked(){
+    public void contClicked() {
+        EventBus.getDefault().post(new StartEvent(concat));
 
-        ((MainActivity)getActivity()).navigatToEndDate();
+        ((MainActivity) getActivity()).navigatToEndDate();
     }
 
 }

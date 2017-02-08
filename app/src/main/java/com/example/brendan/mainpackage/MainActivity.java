@@ -2,20 +2,31 @@ package com.example.brendan.mainpackage;
 
 import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
-import android.util.Log;
 
+import com.example.brendan.mainpackage.event.EndEvent;
+import com.example.brendan.mainpackage.event.StartEvent;
 import com.example.brendan.mainpackage.onboarding.EndFragment;
 import com.example.brendan.mainpackage.onboarding.MainFragment;
 import com.example.brendan.mainpackage.onboarding.StartFragment;
+
+import org.greenrobot.eventbus.EventBus;
+import org.greenrobot.eventbus.Subscribe;
 
 public class MainActivity extends BaseActivity {
 
     private static final String TAG = MainActivity.class.getName();
 
+    private String startTime;
+    private String endTime;
+    private int startMonth;
+    private int startDay;
+    private int startYear;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        EventBus.getDefault().register(this);
         if (savedInstanceState == null) {
             if (getSupportFragmentManager().findFragmentByTag("startFragment") == null) {
                 BaseFragment f = new StartFragment();
@@ -75,4 +86,48 @@ public class MainActivity extends BaseActivity {
 
     }
 
+    @Subscribe
+    public void onStartEvent(StartEvent event) {
+        startTime = event.getTime();
+        System.out.println("Listened for StartEvent");
+    }
+
+    @Subscribe
+    public void onEndEvent(EndEvent event) {
+        endTime = event.getTime();
+        System.out.println("Listened for EndEvent");
+    }
+
+
+    public String getStartTime() {
+        return startTime;
+    }
+
+    public String getEndTime() {
+        return endTime;
+    }
+
+    public int getStartMonth() {
+        return startMonth;
+    }
+
+    public int getStartDay() {
+        return startDay;
+    }
+
+    public int getStartYear() {
+        return startYear;
+    }
+
+    public void setStartMonth(int startMonth) {
+        this.startMonth = startMonth;
+    }
+
+    public void setStartDay(int startDay) {
+        this.startDay = startDay;
+    }
+
+    public void setStartYear(int startYear) {
+        this.startYear = startYear;
+    }
 }
