@@ -2,6 +2,8 @@ package com.example.brendan.mainpackage.onboarding;
 
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -190,10 +192,12 @@ public class MainFragment extends BaseFragment {
                 }
                 total = total / prcpStations;
                 table.insert(fipsList.get(globalIndex), total);
-                //Toast.makeText(getContext(), "Total: " + total, Toast.LENGTH_SHORT).show();
                 postDataEvent(globalIndex);
+                if (task.isFinished()) {
+                    Toast.makeText(getContext(), "Total: " + total, Toast.LENGTH_SHORT).show();
+                }
 
-            }else{
+            } else {
                 System.out.println("DATA RESULT NULL");
             }
         }
@@ -256,31 +260,27 @@ public class MainFragment extends BaseFragment {
 
         @Override
         protected Void doInBackground(final String... strings) {
-
             int l = 0;
             while (l < ecList.size()) {
-                if (l % 5 == 0) {
-                    postLocationEvent(l, strings[0], strings[1]);
-                    try {
-                        Thread.sleep(1400);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
+                    if(l % 5 == 0){
+                        postLocationEvent(l,strings[0],strings[1]);
+                        try {
+                            Thread.sleep(1200);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }else{
+                        postLocationEvent(l,strings[0],strings[1]);
+                        try {
+                            Thread.sleep(800);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
                     }
-                }
-                if (l % 5 != 0) {
-                    postLocationEvent(l, strings[0], strings[1]);
-                    try {
-                        Thread.sleep(700);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
                 l++;
             }
-
-
-            api.closeDialog();
             finished = true;
+            api.closeDialog();
             return null;
         }
 
