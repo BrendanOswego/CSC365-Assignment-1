@@ -3,6 +3,8 @@ package com.example.brendan.mainpackage;
 import android.test.suitebuilder.annotation.Suppress;
 import android.util.Log;
 
+import java.util.ArrayList;
+
 /**
  * Using Algorithms and Functions based off of
  * https://mitpress.mit.edu/books/introduction-algorithms pseudo-code
@@ -15,6 +17,7 @@ public class CustomHashTable<K, V> {
     private int slots;
     private int size;
     private HashEntry<K, V>[] hashTable;
+    private ArrayList<V> listOfAddedEntries;
 
 
     /**
@@ -33,6 +36,7 @@ public class CustomHashTable<K, V> {
         for (int i = 0; i < slots; i++) {
             hashTable[i] = null;
         }
+        listOfAddedEntries = new ArrayList<>();
     }
 
     public CustomHashTable() {
@@ -44,6 +48,7 @@ public class CustomHashTable<K, V> {
         for (int i = 0; i < slots; i++) {
             hashTable[i] = null;
         }
+        listOfAddedEntries = new ArrayList<>();
     }
 
     /**
@@ -53,41 +58,18 @@ public class CustomHashTable<K, V> {
     public void insert(K key, V value) {
         int j = Math.abs(key.hashCode() % slots);
         HashEntry head = hashTable[j];
-        HashEntry toAdd = new HashEntry(key, value);
+        HashEntry temp = new HashEntry(key, value);
+        //Empty bucket
         if (head == null) {
-            hashTable[j] = toAdd;
-            ++size;
+            hashTable[j] = temp;
         } else {
-            while (head != null) {
-                if (head.getKey().equals(key)) {
-                    head.setValue(value);
-                    ++size;
-                    break;
-                }
+            //Bucket is not empty
+            while (head.next != null && !head.next.getKey().equals(key)) {
                 head = head.next;
             }
-            if (head == null) {
-                head = hashTable[j];
-                toAdd.next = head;
-                hashTable[j] = toAdd;
-                ++size;
-            }
+            head.next = temp;
         }
-        if ((size * loadFactor) >= slots) {
-            //Rehash
-            HashEntry[] newTable = hashTable;
-            slots = slots * 2;
-            for (int i = 0; i < slots; i++) {
-                hashTable[i] = null;
-            }
-            for (HashEntry newHead : newTable) {
-                while (newHead != null) {
-                    insert((K) newHead.getKey(), (V) newHead.getValue());
-                    newHead = newHead.next;
-                }
-            }
-        }
-
+        size++;
     }
 
     /**
@@ -97,11 +79,11 @@ public class CustomHashTable<K, V> {
     public V search(K key) {
         int j = Math.abs(key.hashCode() % slots);
 
-        HashEntry<K, V> head = hashTable[j];
+        HashEntry head = hashTable[j];
 
         while (head != null) {
             if (head.getKey().equals(key)) {
-                return head.getValue();
+                return (V) head.getValue();
             }
             head = head.next;
         }
@@ -139,6 +121,18 @@ public class CustomHashTable<K, V> {
             --size;
             return null;
         }
+    }
+
+    public int totalSlots() {
+        return slots;
+    }
+
+    public HashEntry[] printTable() {
+        return hashTable;
+    }
+
+    public ArrayList<V> getAllValues() {
+        return listOfAddedEntries;
     }
 
     public int getSize() {

@@ -1,11 +1,14 @@
 package com.example.brendan.mainpackage.onboarding;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -34,15 +37,25 @@ import com.example.brendan.mainpackage.model.Result;
 import com.example.brendan.mainpackage.view.TempAdapter;
 import com.example.brendan.mainpackage.view.TempItem;
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.ObjectOutputStream;
+import java.io.Writer;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -51,6 +64,9 @@ import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import butterknife.Unbinder;
+
+import static android.R.attr.data;
+import static android.icu.lang.UCharacter.GraphemeClusterBreak.V;
 
 
 /**
@@ -94,8 +110,6 @@ public class MainFragment extends BaseFragment {
 
     private APIClass api;
 
-    File locationFile;
-
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -108,7 +122,6 @@ public class MainFragment extends BaseFragment {
         final View view = inflater.inflate(R.layout.fragment_main, container, false);
         unbinder = ButterKnife.bind(this, view);
         if (savedInstanceState == null) {
-            locationFile = new File(getContext().getFilesDir(), "locationFile.json");
             System.out.println("SavedInstanceState is NULL");
             startTime = ((MainActivity) getActivity()).getStartTime();
             endTime = ((MainActivity) getActivity()).getEndTime();
@@ -117,6 +130,7 @@ public class MainFragment extends BaseFragment {
             table = new CustomHashTable<>();
             api = APIClass.getInstance();
             api.init(getActivity());
+
             locationUUID = api.getAllStates();
         } else {
             System.out.println("SavedInstanceState is NOT NULL PROBLEM");
@@ -159,22 +173,6 @@ public class MainFragment extends BaseFragment {
         EventBus.getDefault().unregister(this);
     }
 
-    private void writeToFile(LocationModel locationModel) {
-        System.out.println("Writing to file");
-        String fileName = "locationFile.json";
-        FileOutputStream outputStream;
-        Gson gson = new Gson();
-        gson.toJson(locationModel);
-        try {
-            outputStream = getContext().openFileOutput(fileName, Context.MODE_PRIVATE);
-            outputStream.write(gson.toString().getBytes());
-            outputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        System.out.println(gson.toJson(locationModel));
-    }
-
     @Subscribe
     public void onLocationEvent(LocationEvent event) {
         if (startTime != null) {
@@ -183,7 +181,6 @@ public class MainFragment extends BaseFragment {
                 stateList = new ArrayList<>();
                 List<Result> locationResults = event.getLocation().getResults();
                 Metadata md_location = event.getLocation().getMetadata();
-                writeToFile(event.getLocation());
                 int i = md_location.getResultset().getCount();
                 int j = md_location.getResultset().getLimit();
                 int count = (i <= j) ? i : j;
@@ -203,6 +200,7 @@ public class MainFragment extends BaseFragment {
                 dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
                 stateSpinner.setAdapter(dataAdapter);
                 stateSpinner.setOnItemSelectedListener(itemListener);
+
             }
         }
 
@@ -217,18 +215,7 @@ public class MainFragment extends BaseFragment {
                 int i = md.getResultset().getCount();
                 int j = md.getResultset().getLimit();
                 maxData = (i <= j) ? i : j;
-                double total = 0;
-                int prcpStations = 0;
-                for (int y = 0; y < maxData; y++) {
-                    if (dataResults.get(y).getDatatype().equals("TAVG")) {
-                        total += dataResults.get(y).getValue();
-                        ++prcpStations;
-                    }
-                }
-                total = total / prcpStations;
-                table.insert(fipsList.get(globalIndex), total);
                 postDataEvent(globalIndex);
-
             } else {
                 removeList.add(globalIndex);
                 System.out.println("DATA RESULT NULL");
@@ -256,6 +243,8 @@ public class MainFragment extends BaseFragment {
                 TempItem temp = new TempItem(name, fip, val);
                 adapter.add(temp);
             }
+            int test = table.getSize();
+            System.out.println(test);
         }
     }
 
@@ -326,14 +315,14 @@ public class MainFragment extends BaseFragment {
                 if (l % 5 == 0) {
                     postLocationEvent(l, strings[0], strings[1]);
                     try {
-                        Thread.sleep(1200);
+                        Thread.sleep(1300);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 } else {
                     postLocationEvent(l, strings[0], strings[1]);
                     try {
-                        Thread.sleep(800);
+                        Thread.sleep(1000);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }

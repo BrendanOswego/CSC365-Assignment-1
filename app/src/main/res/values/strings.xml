@@ -16,4 +16,7 @@
     <string name="title_state">State</string>
     <string name="title_fips">FIPS ID</string>
     <string name="title_temp">Temp (F)</string>
+
+
+    <string name="pref_location_model">Location_Model</string>
 </resources>

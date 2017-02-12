@@ -5,13 +5,15 @@
     xmlns:android="http://schemas.android.com/apk/res/android">
 
     <LinearLayout
+        android:paddingBottom="5dp"
+        android:paddingTop="5dp"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="horizontal">
 
         <TextView
             android:id="@+id/view_temp_name"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="New York" />
@@ -19,7 +21,7 @@
         <TextView
             android:gravity="center"
             android:id="@+id/view_temp_fips"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="FIPS:13" />
@@ -27,7 +29,7 @@
         <TextView
             android:gravity="right"
             android:id="@+id/view_temp_value"
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="33" />
