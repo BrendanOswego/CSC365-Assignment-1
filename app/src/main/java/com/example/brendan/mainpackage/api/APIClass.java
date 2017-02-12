@@ -129,9 +129,9 @@ public class APIClass {
         return uuid;
     }
 
-    public UUID getData(String id, String locationId, String startdate, String enddata) {
+    public UUID getData(String id, String dataType,String locationId, String startdate, String enddata) {
         final UUID uuid = UUID.randomUUID();
-        Call<DataModel> call = controller.getData(id, locationId, startdate, enddata);
+        Call<DataModel> call = controller.getData(id,dataType, locationId, startdate, enddata);
         call.enqueue(new Callback<DataModel>() {
             @Override
             public void onResponse(Call<DataModel> call, Response<DataModel> response) {

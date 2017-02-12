@@ -11,4 +11,9 @@
     <string name="cont">Continue</string>
     <string name="new_search">Create New Search</string>
     <string name="view_graph">View Graph</string>
+
+
+    <string name="title_state">State</string>
+    <string name="title_fips">FIPS ID</string>
+    <string name="title_temp">Temp (F)</string>
 </resources>
