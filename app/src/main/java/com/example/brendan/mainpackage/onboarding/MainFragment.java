@@ -66,6 +66,7 @@ import butterknife.OnClick;
 import butterknife.Unbinder;
 
 import static android.R.attr.data;
+import static android.R.attr.start;
 import static android.icu.lang.UCharacter.GraphemeClusterBreak.V;
 
 
@@ -124,7 +125,7 @@ public class MainFragment extends BaseFragment {
         if (savedInstanceState == null) {
             System.out.println("SavedInstanceState is NULL");
             startTime = ((MainActivity) getActivity()).getStartTime();
-            endTime = ((MainActivity) getActivity()).getEndTime();
+            endTime = startTime;
             fipsList = new ArrayList<>();
             locationTable = new CustomHashTable<>();
             table = new CustomHashTable<>();
@@ -258,7 +259,7 @@ public class MainFragment extends BaseFragment {
                 task = new FIPSTask();
                 String[] dates = new String[2];
                 dates[0] = startTime;
-                dates[1] = startTime;
+                dates[1] = endTime;
                 task.setIndex(adapterView.getSelectedItemPosition());
                 task.execute(dates);
 

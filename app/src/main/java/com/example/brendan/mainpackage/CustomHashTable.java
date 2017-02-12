@@ -59,17 +59,16 @@ public class CustomHashTable<K, V> {
         int j = Math.abs(key.hashCode() % slots);
         HashEntry head = hashTable[j];
         HashEntry temp = new HashEntry(key, value);
-        //Empty bucket
         if (head == null) {
             hashTable[j] = temp;
+            size++;
         } else {
-            //Bucket is not empty
             while (head.next != null && !head.next.getKey().equals(key)) {
                 head = head.next;
             }
             head.next = temp;
         }
-        size++;
+
     }
 
     /**
