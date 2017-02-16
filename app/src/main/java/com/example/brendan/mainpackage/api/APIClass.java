@@ -3,13 +3,9 @@ package com.example.brendan.mainpackage.api;
 import android.app.ProgressDialog;
 import android.content.Context;
 
-import com.example.brendan.mainpackage.BaseFragment;
-import com.example.brendan.mainpackage.MainActivity;
 import com.example.brendan.mainpackage.event.DataEvent;
-import com.example.brendan.mainpackage.event.DataSetEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
 import com.example.brendan.mainpackage.model.DataModel;
-import com.example.brendan.mainpackage.model.DataSetModel;
 import com.example.brendan.mainpackage.model.LocationModel;
 
 import org.greenrobot.eventbus.EventBus;
@@ -20,11 +16,8 @@ import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
-import static android.support.v7.appcompat.R.styleable.View;
-
-
 /**
- * API class for all api calls using the interface class
+ * API class for all api calls using the RetroInterface class
  */
 
 public class APIClass {
@@ -32,10 +25,13 @@ public class APIClass {
     private RetroInterface controller;
 
     private static APIClass instance;
-    ProgressDialog dialog;
-    Context context;
-    ProgressDialog loading;
+    private Context context;
+    private ProgressDialog loading;
 
+    /**
+     * Singleton instance for calling APIClass.
+     * @return APIClass instance.
+     */
     public static APIClass getInstance() {
         if (instance == null) {
             instance = new APIClass();
@@ -43,6 +39,9 @@ public class APIClass {
         return instance;
     }
 
+    /**
+     * Private constructor for APIClass initialization.
+     */
     private APIClass() {
 
         this.controller = RetroController.getServer();
@@ -52,86 +51,18 @@ public class APIClass {
         this.context = context;
     }
 
-
-    public UUID getLocations() {
+    /**
+     * Gets Data from Web Service given by the specified parameters
+     * @param id Data returned will be from the dataset specified.
+     * @param dataType Data returned will contain all of the data type(s) specified.
+     * @param locationId  Data returned will contain data for the location(s) specified.
+     * @param startdate  Data returned will be after the specified date.
+     * @param enddata  Data returned will be after the specified date.
+     * @return randomly generated UUID.
+     */
+    public UUID getData(String id, String dataType, String locationId, String startdate, String enddata) {
         final UUID uuid = UUID.randomUUID();
-        Call<LocationModel> call = controller.getLocation();
-        call.enqueue(new Callback<LocationModel>() {
-            @Override
-            public void onResponse(Call<LocationModel> call, Response<LocationModel> response) {
-                LocationEvent event;
-                if (response.isSuccessful()) {
-                    event = new LocationEvent(uuid, response.body());
-                    EventBus.getDefault().post(event);
-                } else {
-                    int status = response.code();
-                    System.out.println("Status Code: " + status);
-                }
-
-            }
-
-            @Override
-            public void onFailure(Call<LocationModel> call, Throwable t) {
-                t.printStackTrace();
-            }
-        });
-        return uuid;
-    }
-
-    public UUID getLocationById(String id) {
-        final UUID uuid = UUID.randomUUID();
-        Call<LocationModel> call = controller.getLocationById(id);
-        call.enqueue(new Callback<LocationModel>() {
-            @Override
-            public void onResponse(Call<LocationModel> call, Response<LocationModel> response) {
-                LocationEvent event;
-                if (response.isSuccessful()) {
-                    event = new LocationEvent(uuid, response.body());
-                } else {
-                    int status = response.code();
-                    System.out.println("Status Code: " + status);
-                    event = new LocationEvent(uuid, null);
-                }
-                EventBus.getDefault().post(event);
-
-            }
-
-            @Override
-            public void onFailure(Call<LocationModel> call, Throwable t) {
-                t.printStackTrace();
-            }
-        });
-        return uuid;
-    }
-
-    public UUID getDataSets() {
-        final UUID uuid = UUID.randomUUID();
-        Call<DataSetModel> call = controller.getDataSets();
-        call.enqueue(new Callback<DataSetModel>() {
-            @Override
-            public void onResponse(Call<DataSetModel> call, Response<DataSetModel> response) {
-                DataSetEvent event;
-                if (response.isSuccessful()) {
-                    event = new DataSetEvent(uuid, response.body());
-                } else {
-                    int status = response.code();
-                    event = new DataSetEvent(uuid, null);
-                    System.out.println("Status Code: " + status);
-                }
-                EventBus.getDefault().post(event);
-            }
-
-            @Override
-            public void onFailure(Call<DataSetModel> call, Throwable t) {
-                t.printStackTrace();
-            }
-        });
-        return uuid;
-    }
-
-    public UUID getData(String id, String dataType,String locationId, String startdate, String enddata) {
-        final UUID uuid = UUID.randomUUID();
-        Call<DataModel> call = controller.getData(id,dataType, locationId, startdate, enddata);
+        Call<DataModel> call = controller.getData(id, dataType, locationId, startdate, enddata);
         call.enqueue(new Callback<DataModel>() {
             @Override
             public void onResponse(Call<DataModel> call, Response<DataModel> response) {
@@ -154,6 +85,10 @@ public class APIClass {
         return uuid;
     }
 
+    /**
+     * Gets all information for all 52 States.
+     * @return randomly generated UUID.
+     */
     public UUID getAllStates() {
         showDialog("Fetching Locations");
         final UUID uuid = UUID.randomUUID();
@@ -181,6 +116,10 @@ public class APIClass {
         return uuid;
     }
 
+    /**
+     * Dialog method for APIClass when calls are waiting for a response.
+     * @param title String shown to user.
+     */
     public void showDialog(String title) {
         if (loading == null) {
             loading = new ProgressDialog(context);
@@ -192,6 +131,9 @@ public class APIClass {
         loading.show();
     }
 
+    /**
+     * Hides dialog when a response has been made from the Web Service.
+     */
     public void closeDialog() {
         loading.dismiss();
     }

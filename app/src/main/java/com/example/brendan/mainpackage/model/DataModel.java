@@ -3,7 +3,7 @@ package com.example.brendan.mainpackage.model;
 import java.util.List;
 
 /**
- * Created by brendan on 1/31/17.
+ * Model class for Data from JSON
  */
 
 public class DataModel {

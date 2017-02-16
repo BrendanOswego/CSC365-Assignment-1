@@ -1,7 +1,7 @@
 package com.example.brendan.mainpackage.model;
 
 /**
- * Created by brendan on 1/27/17.
+ * Model class for Result from JSON
  */
 
 public class Result {

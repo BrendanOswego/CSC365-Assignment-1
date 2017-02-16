@@ -1,18 +1,18 @@
 package com.example.brendan.mainpackage.event;
 
 /**
- * Created by brendan on 2/9/17.
+ * Event class for EventBus events
  */
 
 public class FinishEvent {
 
     private boolean finished;
 
-    public FinishEvent(boolean finished){
+    public FinishEvent(boolean finished) {
         this.finished = finished;
     }
 
-    public boolean isFinished(){
+    public boolean isFinished() {
         return finished;
     }
 

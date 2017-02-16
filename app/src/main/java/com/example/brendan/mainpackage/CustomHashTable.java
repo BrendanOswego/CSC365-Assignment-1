@@ -1,59 +1,51 @@
 package com.example.brendan.mainpackage;
 
-import android.test.suitebuilder.annotation.Suppress;
-import android.util.Log;
-
-import java.util.ArrayList;
-
 /**
  * Using Algorithms and Functions based off of
  * https://mitpress.mit.edu/books/introduction-algorithms pseudo-code
  */
 @SuppressWarnings("unchecked")
 public class CustomHashTable<K, V> {
-    private static final String TAG = CustomHashTable.class.getName();
-
     private float loadFactor;
     private int slots;
     private int size;
     private HashEntry<K, V>[] hashTable;
-    private ArrayList<V> listOfAddedEntries;
-
 
     /**
      * Constructor to initialize instance of class, taking slots as a parameter,
-     * declares the loadFactor to default value, and new HashMember[] table
+     * declares the loadFactor to default value, and new HashEntry[] table
      * with the size given by slots.
      *
-     * @param slots Size of the hash table
+     * @param slots Size of the hash table.
      */
     public CustomHashTable(int slots) {
         this.slots = slots;
         size = 0;
         loadFactor = .75f;
         hashTable = (HashEntry<K, V>[]) new HashEntry[slots];
-        //Make sure all elements are null from beginning
         for (int i = 0; i < slots; i++) {
             hashTable[i] = null;
         }
-        listOfAddedEntries = new ArrayList<>();
     }
 
+    /**
+     * Constructor to initialize instance of class, declares slots to default slots,
+     * declares the loadFactor to default value, and new HashEntry[] table
+     * with the size given by slots.
+     */
     public CustomHashTable() {
         size = 0;
         this.slots = 128;
         loadFactor = .75f;
         hashTable = (HashEntry<K, V>[]) new HashEntry[slots];
-        //Make sure all elements are null from beginning
         for (int i = 0; i < slots; i++) {
             hashTable[i] = null;
         }
-        listOfAddedEntries = new ArrayList<>();
     }
 
     /**
-     * @param key   Key to be added to the table
-     * @param value Value that key will store
+     * @param key   Key to be added to the table.
+     * @param value Value that key will store.
      */
     public void insert(K key, V value) {
         int j = Math.abs(key.hashCode() % slots);
@@ -72,8 +64,8 @@ public class CustomHashTable<K, V> {
     }
 
     /**
-     * @param key Key being searched from the HashMember[] table
-     * @return slot value the key is in
+     * @param key Key being searched from the HashMember[] table.
+     * @return slot value the key is in.
      */
     public V search(K key) {
         int j = Math.abs(key.hashCode() % slots);
@@ -90,8 +82,8 @@ public class CustomHashTable<K, V> {
     }
 
     /**
-     * @param key Generic Key
-     * @return
+     * @param key Generic Key.
+     * @return value paired to key given as parameter.
      */
     public V remove(K key) {
 
@@ -122,18 +114,9 @@ public class CustomHashTable<K, V> {
         }
     }
 
-    public int totalSlots() {
-        return slots;
-    }
-
-    public HashEntry[] printTable() {
-        return hashTable;
-    }
-
-    public ArrayList<V> getAllValues() {
-        return listOfAddedEntries;
-    }
-
+    /**
+     * @return size of hashTable.
+     */
     public int getSize() {
         return size;
     }
@@ -145,33 +128,43 @@ public class CustomHashTable<K, V> {
         return size >= (slots * loadFactor);
     }
 
-
+    /**
+     * Generic inner class that structures the entries to be added to the hashTable.
+     *
+     * @param <K> Generic Key for class.
+     * @param <V> Generic Value for class.
+     */
     private static class HashEntry<K, V> {
 
         private K key;
         private V value;
         HashEntry<K, V> next;
 
+        /**
+         * Public constructor initializing variables.
+         *
+         * @param key   Assign key from constructor.
+         * @param value Assign value from constructor.
+         */
         public HashEntry(K key, V value) {
             this.key = key;
             this.value = value;
             next = null;
         }
 
+        /**
+         * @return key generic value.
+         */
         K getKey() {
             return key;
         }
 
-        public void setKey(K key) {
-            this.key = key;
-        }
-
+        /**
+         * @return value generic value.
+         */
         V getValue() {
             return value;
         }
 
-        void setValue(V value) {
-            this.value = value;
-        }
     }
 }

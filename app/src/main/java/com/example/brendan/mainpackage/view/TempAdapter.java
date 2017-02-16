@@ -1,6 +1,7 @@
 package com.example.brendan.mainpackage.view;
 
 import android.content.Context;
+import android.support.annotation.NonNull;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,7 +14,7 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 
 /**
- * Created by brendan on 2/9/17.
+ * Adapter class for MainFragment ListView
  */
 
 public class TempAdapter extends ArrayAdapter<TempItem> {
@@ -23,7 +24,7 @@ public class TempAdapter extends ArrayAdapter<TempItem> {
         super(context,0,tempItemList);
     }
     @Override
-    public View getView(int position, View convertView, ViewGroup parent) {
+    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
         TempItem item = getItem(position);
         if(convertView == null){
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.view_temp_child, parent, false);
@@ -34,12 +35,13 @@ public class TempAdapter extends ArrayAdapter<TempItem> {
 
         DecimalFormat df = new DecimalFormat("###.##");
 
+        assert item != null;
         name.setText(item.getName());
         fips.setText(item.getFips());
         if(item.getValue() != null) {
             value.setText(df.format(item.getValue()));
         }else {
-            value.setText("No info");
+            value.setText(getContext().getResources().getString(R.string.no_info));
         }
         return convertView;
     }

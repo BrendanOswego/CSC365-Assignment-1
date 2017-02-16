@@ -2,25 +2,19 @@ package com.example.brendan.mainpackage;
 
 import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
-
-import com.example.brendan.mainpackage.event.EndEvent;
 import com.example.brendan.mainpackage.event.StartEvent;
-import com.example.brendan.mainpackage.onboarding.EndFragment;
 import com.example.brendan.mainpackage.onboarding.MainFragment;
 import com.example.brendan.mainpackage.onboarding.StartFragment;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
+/**
+ * Main Activity that handles Fragment Navigation and the StartEvent event.
+ */
 public class MainActivity extends BaseActivity {
 
-    private static final String TAG = MainActivity.class.getName();
-
     private String startTime;
-    private String endTime;
-    private int startMonth;
-    private int startDay;
-    private int startYear;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,7 +34,9 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-
+    /**
+     * Sends User to StartFragment
+     */
     public void navigateToStartDate() {
         BaseFragment f = new StartFragment();
         FragmentManager m = getSupportFragmentManager();
@@ -55,21 +51,9 @@ public class MainActivity extends BaseActivity {
         }
     }
 
-    public void navigatToEndDate() {
-        BaseFragment f = new EndFragment();
-        FragmentManager m = getSupportFragmentManager();
-        if (m.findFragmentByTag("endFragment") == null) {
-            m.beginTransaction()
-                    .replace(R.id.fragment_container, f, "endFragment")
-                    .commit();
-        } else {
-            m.beginTransaction()
-                    .replace(R.id.fragment_container, m.findFragmentByTag("endFragment"))
-                    .commit();
-        }
-
-    }
-
+    /**
+     * Sends User to MainFragment
+     */
     public void navigateToMain() {
         BaseFragment f = new MainFragment();
         FragmentManager m = getSupportFragmentManager();
@@ -86,48 +70,22 @@ public class MainActivity extends BaseActivity {
 
     }
 
+    /**
+     * Receives startTime from StartFragment used for information in MainFragment
+     * @param event EventBus CallBack event after post has been made
+     */
     @Subscribe
     public void onStartEvent(StartEvent event) {
         startTime = event.getTime();
         System.out.println("Listened for StartEvent");
     }
 
-    @Subscribe
-    public void onEndEvent(EndEvent event) {
-        endTime = event.getTime();
-        System.out.println("Listened for EndEvent");
-    }
-
-
+    /**
+     *
+     * @return startTime class variable
+     */
     public String getStartTime() {
         return startTime;
     }
 
-    public String getEndTime() {
-        return endTime;
-    }
-
-    public int getStartMonth() {
-        return startMonth;
-    }
-
-    public int getStartDay() {
-        return startDay;
-    }
-
-    public int getStartYear() {
-        return startYear;
-    }
-
-    public void setStartMonth(int startMonth) {
-        this.startMonth = startMonth;
-    }
-
-    public void setStartDay(int startDay) {
-        this.startDay = startDay;
-    }
-
-    public void setStartYear(int startYear) {
-        this.startYear = startYear;
-    }
 }

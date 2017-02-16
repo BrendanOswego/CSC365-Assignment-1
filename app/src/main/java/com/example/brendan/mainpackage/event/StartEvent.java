@@ -1,12 +1,12 @@
 package com.example.brendan.mainpackage.event;
 
 /**
- * Created by brendan on 2/8/17.
+ * Event class for EventBus events
  */
 
 public class StartEvent {
 
-    String time;
+    private String time;
 
     public StartEvent(String time){
         this.time = time;

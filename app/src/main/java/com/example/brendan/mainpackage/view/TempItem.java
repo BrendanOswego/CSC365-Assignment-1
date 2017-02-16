@@ -1,7 +1,7 @@
 package com.example.brendan.mainpackage.view;
 
 /**
- * Created by brendan on 2/9/17.
+ * Model class for Temperature Items in MainFragment ListView
  */
 
 public class TempItem {

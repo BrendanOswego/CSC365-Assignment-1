@@ -24,9 +24,11 @@ import butterknife.ButterKnife;
 import butterknife.OnClick;
 import butterknife.Unbinder;
 
-//TODO Take selected date and take as Bundle argument in MainFragment
+
+/**
+ * Fragment class for handling the start date chosen for the MainFragment API calls.
+ */
 public class StartFragment extends BaseFragment {
-    private static final String TAG = StartFragment.class.getName();
 
     @BindView(R.id.btn_start)
     Button startButton;
@@ -44,7 +46,6 @@ public class StartFragment extends BaseFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setRetainInstance(true);
     }
 
     @Override
@@ -118,10 +119,6 @@ public class StartFragment extends BaseFragment {
                     }
                     yearSelected = String.valueOf(year);
                     concat = yearSelected + "-" + monthSelected + "-" + daySelected;
-                    System.out.println(concat);
-                    ((MainActivity) getActivity()).setStartDay(day);
-                    ((MainActivity) getActivity()).setStartMonth(month + 1);
-                    ((MainActivity) getActivity()).setStartYear(year);
                 } else {
                     startButton.setEnabled(false);
                     startButton.setBackgroundColor(getResources().getColor(R.color.disabled));
@@ -136,10 +133,12 @@ public class StartFragment extends BaseFragment {
 
     };
 
+    /**
+     * Sends User to MainFragment when necessary information is chosen from the CalendarView
+     */
     @OnClick(R.id.btn_start)
-    public void contClicked() {
+    public void submitClicked() {
         EventBus.getDefault().post(new StartEvent(concat));
-
         ((MainActivity) getActivity()).navigateToMain();
     }
 

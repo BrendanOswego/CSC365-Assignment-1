@@ -8,9 +8,8 @@ import android.os.Message;
 import android.support.v4.app.Fragment;
 
 /**
- * Base Fragment class for All application fragments
+ * Base Fragment class for all application Fragments
  */
-
 public class BaseFragment extends Fragment {
 
 
@@ -18,7 +17,9 @@ public class BaseFragment extends Fragment {
     Handler handler;
     Thread t;
 
-
+    /**
+     * Shows ProgressDialog while information is being loaded.
+     */
     public void showDialog() {
         if(dialog == null){
             dialog = new ProgressDialog(getContext());
@@ -44,6 +45,10 @@ public class BaseFragment extends Fragment {
 
 
     }
+
+    /**
+     * Hides ProgressDialog  when information is done loading.
+     */
     public void hideDialog() {
         dialog.dismiss();
         t.stop();

@@ -8,6 +8,10 @@ class RetroController {
 
     private final static String base_url = "https://www.ncdc.noaa.gov/cdo-web/api/v2/";
 
+    /**
+     * Gets RetroClient instance
+     * @return instance of RetrofitClient
+     */
     static RetroInterface getServer(){
         return RetroClient.getClient(base_url).create(RetroInterface.class);
     }

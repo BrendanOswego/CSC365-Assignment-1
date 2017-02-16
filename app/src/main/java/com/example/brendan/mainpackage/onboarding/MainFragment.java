@@ -1,22 +1,16 @@
 package com.example.brendan.mainpackage.onboarding;
 
-import android.app.Activity;
-import android.content.Context;
-import android.content.SharedPreferences;
-import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.util.Log;
+
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
 import android.widget.AdapterView;
-import android.widget.ArrayAdapter;
 import android.widget.FrameLayout;
 import android.widget.ListView;
-import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.example.brendan.mainpackage.BaseFragment;
@@ -26,67 +20,38 @@ import com.example.brendan.mainpackage.MainActivity;
 import com.example.brendan.mainpackage.R;
 import com.example.brendan.mainpackage.api.APIClass;
 import com.example.brendan.mainpackage.event.DataEvent;
-import com.example.brendan.mainpackage.event.EndEvent;
 import com.example.brendan.mainpackage.event.FinishEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
-import com.example.brendan.mainpackage.event.StartEvent;
 import com.example.brendan.mainpackage.model.DataResults;
-import com.example.brendan.mainpackage.model.LocationModel;
 import com.example.brendan.mainpackage.model.Metadata;
 import com.example.brendan.mainpackage.model.Result;
 import com.example.brendan.mainpackage.view.TempAdapter;
 import com.example.brendan.mainpackage.view.TempItem;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.ObjectOutputStream;
-import java.io.Writer;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
 import butterknife.OnClick;
 import butterknife.Unbinder;
 
-import static android.R.attr.data;
-import static android.R.attr.start;
-import static android.icu.lang.UCharacter.GraphemeClusterBreak.V;
-
-
 /**
- * Fragment class for making API calls, using EventBus to listen for APIClass Event posts.
- * Adding State,Precipitation pairs.
- * PRCP is in hundredths of an inch
+ * Fragment class for making API calls, using EventBus to listen for APIClass Event posts, and
+ * using CustomHashTable class for Assignment.
  */
-//TODO Check data from time frame and see if null. If it is, remove it from the spinner
 public class MainFragment extends BaseFragment {
-    private static final String TAG = MainFragment.class.getName();
 
-    @BindView(R.id.spinner_states)
-    Spinner stateSpinner;
+    @BindView(R.id.tv_date_picked)
+    TextView datePicked;
     @BindView(R.id.frame_main)
     FrameLayout mainFrame;
-
     @BindView(R.id.view_new_search)
     View viewNewSearch;
-
     @BindView(R.id.listview_main)
     ListView listView;
 
@@ -94,27 +59,22 @@ public class MainFragment extends BaseFragment {
 
     private UUID locationUUID;
     private UUID dataResultsUUID;
-    //Key:State Value:FIPS
     private CustomHashTable<String, String> locationTable;
-    //Key:FIPS Value:PRCP
     private CustomHashTable<String, Double> table;
     private List<DataResults> dataResults;
     EastCoastList ecList = new EastCoastList();
     private ArrayList<String> stateList;
-    private ArrayList<Integer> removeList;
     private int maxData;
     private int globalIndex = 0;
     private String startTime;
     private String endTime;
     private List<String> fipsList;
-    private FIPSTask task;
 
     private APIClass api;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setRetainInstance(true);
         EventBus.getDefault().register(this);
     }
 
@@ -123,7 +83,7 @@ public class MainFragment extends BaseFragment {
         final View view = inflater.inflate(R.layout.fragment_main, container, false);
         unbinder = ButterKnife.bind(this, view);
         if (savedInstanceState == null) {
-            System.out.println("SavedInstanceState is NULL");
+            mainFrame.setVisibility(View.GONE);
             startTime = ((MainActivity) getActivity()).getStartTime();
             endTime = startTime;
             fipsList = new ArrayList<>();
@@ -131,10 +91,9 @@ public class MainFragment extends BaseFragment {
             table = new CustomHashTable<>();
             api = APIClass.getInstance();
             api.init(getActivity());
-
             locationUUID = api.getAllStates();
-        } else {
-            System.out.println("SavedInstanceState is NOT NULL PROBLEM");
+            listView.setOnItemClickListener(listViewClickListener);
+
         }
         return view;
     }
@@ -167,18 +126,29 @@ public class MainFragment extends BaseFragment {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        System.out.println("Calling OnDestroy");
         unbinder = null;
         table = null;
         locationTable = null;
         EventBus.getDefault().unregister(this);
     }
 
+    /**
+     * Send User back to beginning calling all necessary Android methods for re-initializing MainFragment.
+     */
+    @OnClick(R.id.view_new_search)
+    public void navigateBeginning() {
+        ((MainActivity) getActivity()).navigateToStartDate();
+    }
+
+    /**
+     * Listens for LocationEvent post from the APIClass.
+     *
+     * @param event LocationEvent post created after APIClass CallBack from Web Service.
+     */
     @Subscribe
     public void onLocationEvent(LocationEvent event) {
         if (startTime != null) {
             if (event.getUuid().equals(this.locationUUID)) {
-                removeList = new ArrayList<>();
                 stateList = new ArrayList<>();
                 List<Result> locationResults = event.getLocation().getResults();
                 Metadata md_location = event.getLocation().getMetadata();
@@ -196,17 +166,22 @@ public class MainFragment extends BaseFragment {
                         }
                     }
                 }
-                ArrayAdapter<String> dataAdapter = new ArrayAdapter<>(getContext(),
-                        android.R.layout.simple_spinner_item, stateList);
-                dataAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                stateSpinner.setAdapter(dataAdapter);
-                stateSpinner.setOnItemSelectedListener(itemListener);
-
+                api.showDialog("Fetching Information");
+                FIPSTask task = new FIPSTask();
+                String[] dates = new String[2];
+                dates[0] = startTime;
+                dates[1] = endTime;
+                task.execute(dates);
             }
         }
 
     }
 
+    /**
+     * Listens for DataEvent post from the APIClass.
+     *
+     * @param event DataEvent post created after APIClass CallBack from Web Service.
+     */
     @Subscribe
     public void onDataEvent(DataEvent event) {
         if (event.getUuid().equals(this.dataResultsUUID)) {
@@ -217,23 +192,18 @@ public class MainFragment extends BaseFragment {
                 int j = md.getResultset().getLimit();
                 maxData = (i <= j) ? i : j;
                 postDataEvent(globalIndex);
-            } else {
-                removeList.add(globalIndex);
-                System.out.println("DATA RESULT NULL");
             }
         }
     }
 
+    /**
+     * Listens for FinishEvent post from the FIPSTask.
+     *
+     * @param event FinishEvent post created after FIPSTask has returned null in doInBackground().
+     */
     @Subscribe
     public void onFinishedEvent(FinishEvent event) {
         if (event.isFinished()) {
-            String fips = locationTable.search((String) stateSpinner.getSelectedItem());
-            Double value = table.search(fips);
-            if (value != null) {
-                Toast.makeText(getContext(), String.valueOf(value), Toast.LENGTH_SHORT).show();
-            } else {
-                Toast.makeText(getContext(), "No information for " + fips, Toast.LENGTH_SHORT).show();
-            }
             ArrayList<TempItem> listItems = new ArrayList<>();
             TempAdapter adapter = new TempAdapter(getContext(), listItems);
             listView.setAdapter(adapter);
@@ -244,43 +214,32 @@ public class MainFragment extends BaseFragment {
                 TempItem temp = new TempItem(name, fip, val);
                 adapter.add(temp);
             }
+            String text = String.format(getResources().getString(R.string.date_picked), startTime);
+            datePicked.setText(text);
             int test = table.getSize();
             System.out.println(test);
+            mainFrame.setVisibility(View.VISIBLE);
         }
     }
 
-    AdapterView.OnItemSelectedListener itemListener = new AdapterView.OnItemSelectedListener() {
-        int count = 0;
-
-        @Override
-        public void onItemSelected(AdapterView<?> adapterView, View view, int a, long b) {
-            if (count >= 1) {
-                api.showDialog("Fetching Information");
-                task = new FIPSTask();
-                String[] dates = new String[2];
-                dates[0] = startTime;
-                dates[1] = endTime;
-                task.setIndex(adapterView.getSelectedItemPosition());
-                task.execute(dates);
-
-            }
-            count++;
-        }
-
-        @Override
-        public void onNothingSelected(AdapterView<?> adapterView) {
-
-        }
-    };
-
-    @OnClick(R.id.view_new_search)
-    public void navigateBeginning() {
-        ((MainActivity) getActivity()).navigateToStartDate();
+    /**
+     * Makes All API calls for dataResults of day specified in StartFragment
+     *
+     * @param index Index in the fipsList ArrayList for making API call.
+     * @param start String from StartFragment for start date.
+     * @param end   String from StartFragment for end date, which is same as start date since doing daily average temperature.
+     */
+    private void postLocationEvent(int index, String start, String end) {
+        globalIndex = index;
+        dataResultsUUID = api.getData("GHCND", "TAVG", fipsList.get(index), start, end);
     }
 
-
-    private void postDataEvent(int fipsIndex) {
-        System.out.println("Calling POST DATA EVENT");
+    /**
+     * Adds information to table CustomHashTable
+     *
+     * @param index index from fipsList ArrayList
+     */
+    private void postDataEvent(int index) {
         double total = 0;
         int prcpStations = 0;
         for (int i = 0; i < maxData; i++) {
@@ -290,25 +249,69 @@ public class MainFragment extends BaseFragment {
             }
         }
         total = total / prcpStations;
-        System.out.println("Total for index " + fipsIndex + "==" + total);
-        table.insert(fipsList.get(fipsIndex), total);
+        System.out.println("Total for index " + index + "==" + total);
+        table.insert(fipsList.get(index), total);
 
-        if (fipsIndex == stateSpinner.getSelectedItemPosition()) {
-            Toast.makeText(getContext(), "Total for selected state: " + total, Toast.LENGTH_SHORT).show();
+    }
+
+    /**
+     * Calculates Euclidean Distance of 2 Doubles
+     *
+     * @param x Double being compared to by parameter y
+     * @param y Double to compare to parameter x
+     * @return Distance between x and y
+     */
+    public double getDistance(double x, double y) {
+        double sum = 0.0;
+        if (x > y) {
+            sum += Math.pow(x - y, 2.0);
+        } else {
+            sum += Math.pow(y - x, 2.0);
         }
-
+        return Math.sqrt(sum);
     }
 
-    private void postLocationEvent(int index, String start, String end) {
-        globalIndex = index;
-        dataResultsUUID = api.getData("GHCND", "TAVG", fipsList.get(index), start, end);
-    }
+    AdapterView.OnItemClickListener listViewClickListener = new AdapterView.OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> adapterView, View view, int viewIndex, long l) {
+            TextView state = (TextView) view.findViewById(R.id.view_temp_name);
+            String fips = locationTable.search(state.getText().toString());
+            Double compareTo = table.search(fips);
+            if (compareTo != null) {
+                Double temp;
+                //Playing it safe
+                Double winner = 0.0000000000;
+                int index = 0;
+                for (int i = 0; i < fipsList.size(); i++) {
+                    if (table.search(fipsList.get(i)) != null) {
+                        temp = table.search(fipsList.get(i));
+                        Double distance = getDistance(compareTo, temp);
+                        if (((distance < winner) || winner == 0.0000000000) && !temp.equals(compareTo)) {
+                            winner = distance;
+                            index = i;
+                        }
+                    }
+                }
+                Toast.makeText(getContext(), "Most Similar: " + stateList.get(index), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getContext(), "There is no information for selected state", Toast.LENGTH_SHORT).show();
+            }
+        }
+    };
 
-
+    /**
+     * Private inner class for handling  Asynchronous Data API calls since cannot happen on Main Thread, based off of the laws of Android development.
+     */
     private class FIPSTask extends AsyncTask<String, Void, Void> {
         private boolean finished = false;
-        int index = 0;
 
+        /**
+         * Override method needed for making api calls in a separate thread then reverts back to
+         * Main Thread when done
+         *
+         * @param strings list of strings for the start and end date
+         * @return null when done with Async api calls.
+         */
         @Override
         protected Void doInBackground(final String... strings) {
             int l = 0;
@@ -341,18 +344,5 @@ public class MainFragment extends BaseFragment {
             api.closeDialog();
             return null;
         }
-
-        boolean isFinished() {
-            return finished;
-        }
-
-        public void setIndex(int index) {
-            this.index = index;
-        }
-
-        public int getIndex() {
-            return index;
-        }
-
     }
 }

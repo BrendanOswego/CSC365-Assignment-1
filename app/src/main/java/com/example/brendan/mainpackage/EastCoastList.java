@@ -4,14 +4,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Created by brendan on 2/8/17.
+ * Class for holding the list of East Coast States, instead of dumping it in onCreateView of MainFragment.
  */
 
 public class EastCoastList {
 
-    List<String> list_eastCoastNames = new ArrayList<>();
+    private List<String> list_eastCoastNames;
 
-    public EastCoastList(){
+    /**
+     * Public constructor, initializing new ArrayList adding all States to the ArrayList
+     */
+    public EastCoastList() {
+        list_eastCoastNames = new ArrayList<>();
         list_eastCoastNames.add("Maine");
         list_eastCoastNames.add("New Hampshire");
         list_eastCoastNames.add("Massachusetts");
@@ -28,12 +32,19 @@ public class EastCoastList {
         list_eastCoastNames.add("Florida");
     }
 
-
-    public List<String> getList(){
+    /**
+     *
+     * @return the class variable ArrayList
+     */
+    public List<String> getList() {
         return this.list_eastCoastNames;
     }
 
-    public int size(){
+    /**
+     *
+     * @return size of ArrayList
+     */
+    public int size() {
         return 14;
     }
 }
