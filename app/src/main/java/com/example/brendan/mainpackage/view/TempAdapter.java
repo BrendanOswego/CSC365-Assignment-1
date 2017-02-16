@@ -1,7 +1,6 @@
 package com.example.brendan.mainpackage.view;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,7 +23,7 @@ public class TempAdapter extends ArrayAdapter<TempItem> {
         super(context,0,tempItemList);
     }
     @Override
-    public View getView(int position, View convertView, @NonNull ViewGroup parent) {
+    public View getView(int position, View convertView, ViewGroup parent) {
         TempItem item = getItem(position);
         if(convertView == null){
             convertView = LayoutInflater.from(getContext()).inflate(R.layout.view_temp_child, parent, false);
@@ -35,7 +34,6 @@ public class TempAdapter extends ArrayAdapter<TempItem> {
 
         DecimalFormat df = new DecimalFormat("###.##");
 
-        assert item != null;
         name.setText(item.getName());
         fips.setText(item.getFips());
         if(item.getValue() != null) {

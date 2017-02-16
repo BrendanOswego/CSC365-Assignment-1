@@ -62,14 +62,15 @@ public class MainFragment extends BaseFragment {
     private CustomHashTable<String, String> locationTable;
     private CustomHashTable<String, Double> table;
     private List<DataResults> dataResults;
-    EastCoastList ecList = new EastCoastList();
+    private EastCoastList ecList = new EastCoastList();
     private ArrayList<String> stateList;
     private int maxData;
     private int globalIndex = 0;
     private String startTime;
     private String endTime;
     private List<String> fipsList;
-
+    private ArrayList<TempItem> listItems;
+    private TempAdapter adapter;
     private APIClass api;
 
     @Override
@@ -93,6 +94,7 @@ public class MainFragment extends BaseFragment {
             api.init(getActivity());
             locationUUID = api.getAllStates();
             listView.setOnItemClickListener(listViewClickListener);
+            listItems = new ArrayList<>();
 
         }
         return view;
@@ -191,7 +193,10 @@ public class MainFragment extends BaseFragment {
                 int i = md.getResultset().getCount();
                 int j = md.getResultset().getLimit();
                 maxData = (i <= j) ? i : j;
-                postDataEvent(globalIndex);
+            }
+            postDataEvent(globalIndex);
+            if(adapter != null){
+                adapter.notifyDataSetChanged();
             }
         }
     }
@@ -204,20 +209,10 @@ public class MainFragment extends BaseFragment {
     @Subscribe
     public void onFinishedEvent(FinishEvent event) {
         if (event.isFinished()) {
-            ArrayList<TempItem> listItems = new ArrayList<>();
-            TempAdapter adapter = new TempAdapter(getContext(), listItems);
+            adapter = new TempAdapter(getContext(), listItems);
             listView.setAdapter(adapter);
-            for (int i = 0; i < stateList.size(); i++) {
-                String name = stateList.get(i);
-                String fip = locationTable.search(name);
-                Double val = table.search(fip);
-                TempItem temp = new TempItem(name, fip, val);
-                adapter.add(temp);
-            }
             String text = String.format(getResources().getString(R.string.date_picked), startTime);
             datePicked.setText(text);
-            int test = table.getSize();
-            System.out.println(test);
             mainFrame.setVisibility(View.VISIBLE);
         }
     }
@@ -241,16 +236,23 @@ public class MainFragment extends BaseFragment {
      */
     private void postDataEvent(int index) {
         double total = 0;
-        int prcpStations = 0;
-        for (int i = 0; i < maxData; i++) {
-            if (dataResults.get(i).getDatatype().equals("TAVG")) {
-                total += dataResults.get(i).getValue();
-                ++prcpStations;
+        int tempStations = 0;
+        TempItem temp;
+        if (dataResults != null) {
+            for (int i = 0; i < maxData; i++) {
+                if (dataResults.get(i).getDatatype().equals("TAVG")) {
+                    total += dataResults.get(i).getValue();
+                    ++tempStations;
+                }
             }
+            total = total / tempStations;
+            System.out.println("Total for index " + index + "==" + total);
+            table.insert(fipsList.get(index), total);
+            temp = new TempItem(stateList.get(index), fipsList.get(index), total);
+        } else {
+            temp = new TempItem(stateList.get(index), fipsList.get(index), null);
         }
-        total = total / prcpStations;
-        System.out.println("Total for index " + index + "==" + total);
-        table.insert(fipsList.get(index), total);
+        listItems.add(temp);
 
     }
 
@@ -317,16 +319,16 @@ public class MainFragment extends BaseFragment {
             int l = 0;
             while (l < ecList.size()) {
                 if (l % 5 == 0) {
-                    postLocationEvent(l, strings[0], strings[1]);
                     try {
-                        Thread.sleep(1300);
+                        Thread.sleep(1100);
+                        postLocationEvent(l, strings[0], strings[1]);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 } else {
-                    postLocationEvent(l, strings[0], strings[1]);
                     try {
-                        Thread.sleep(1000);
+                        Thread.sleep(1500);
+                        postLocationEvent(l, strings[0], strings[1]);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
