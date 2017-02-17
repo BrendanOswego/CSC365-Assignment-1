@@ -45,7 +45,6 @@ import butterknife.Unbinder;
  * using CustomHashTable class for Assignment.
  */
 public class MainFragment extends BaseFragment {
-
     @BindView(R.id.tv_date_picked)
     TextView datePicked;
     @BindView(R.id.frame_main)
@@ -79,6 +78,7 @@ public class MainFragment extends BaseFragment {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        setRetainInstance(true);
         EventBus.getDefault().register(this);
     }
 
@@ -171,7 +171,7 @@ public class MainFragment extends BaseFragment {
                         }
                     }
                 }
-                api.showDialog("Fetching Information");
+                api.showDialog("Searching for Temperatures", true);
                 FIPSTask task = new FIPSTask();
                 String[] dates = new String[2];
                 dates[0] = startTime;
@@ -323,13 +323,16 @@ public class MainFragment extends BaseFragment {
                 dataResultsUUID = api.getData("GHCND", "TAVG", fipsList.get(globalIndex), startTime, endTime);
                 while (!callMade) {
                     try {
+                        //Need to have fun otherwise I'll go crazy
+                        if (((MainActivity) getActivity()).isDevMode())
+                            System.out.println("Sherlock is sleeping...");
                         Thread.sleep(50);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
                 try {
-                    Thread.sleep(1200);
+                    Thread.sleep(200);
                     postLocationEvent(l);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -339,6 +342,13 @@ public class MainFragment extends BaseFragment {
                 if (l < ecList.size()) {
                     globalIndex++;
                 }
+                getActivity().runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        api.getDialog().setMessage(fipsList.get(globalIndex));
+                        api.getDialog().setProgress(globalIndex);
+                    }
+                });
             }
 
             finished = true;

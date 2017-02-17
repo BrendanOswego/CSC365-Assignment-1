@@ -30,6 +30,7 @@ public class APIClass {
 
     /**
      * Singleton instance for calling APIClass.
+     *
      * @return APIClass instance.
      */
     public static APIClass getInstance() {
@@ -53,11 +54,12 @@ public class APIClass {
 
     /**
      * Gets Data from Web Service given by the specified parameters
-     * @param id Data returned will be from the dataset specified.
-     * @param dataType Data returned will contain all of the data type(s) specified.
-     * @param locationId  Data returned will contain data for the location(s) specified.
+     *
+     * @param id         Data returned will be from the dataset specified.
+     * @param dataType   Data returned will contain all of the data type(s) specified.
+     * @param locationId Data returned will contain data for the location(s) specified.
      * @param startdate  Data returned will be after the specified date.
-     * @param enddata  Data returned will be after the specified date.
+     * @param enddata    Data returned will be after the specified date.
      * @return randomly generated UUID.
      */
     public UUID getData(String id, String dataType, String locationId, String startdate, String enddata) {
@@ -87,10 +89,11 @@ public class APIClass {
 
     /**
      * Gets all information for all 52 States.
+     *
      * @return randomly generated UUID.
      */
     public UUID getAllStates() {
-        showDialog("Fetching Locations");
+        showDialog("Fetching Locations", false);
         final UUID uuid = UUID.randomUUID();
         Call<LocationModel> call = controller.getAllStates();
         call.enqueue(new Callback<LocationModel>() {
@@ -118,16 +121,23 @@ public class APIClass {
 
     /**
      * Dialog method for APIClass when calls are waiting for a response.
+     *
      * @param title String shown to user.
      */
-    public void showDialog(String title) {
-        if (loading == null) {
-            loading = new ProgressDialog(context);
+    public void showDialog(String title, boolean data) {
+
+        loading = new ProgressDialog(context);
+
+        if (data) {
+            loading.setProgress(0);
+            loading.setMax(14);
+            loading.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        } else {
+            loading.setMessage("Fetching locations...");
         }
         loading.setTitle(title);
         loading.setCancelable(false);
         loading.setCanceledOnTouchOutside(false);
-        loading.setMessage("Please wait...this will take some time");
         loading.show();
     }
 
@@ -136,5 +146,9 @@ public class APIClass {
      */
     public void closeDialog() {
         loading.dismiss();
+    }
+
+    public ProgressDialog getDialog() {
+        return loading;
     }
 }

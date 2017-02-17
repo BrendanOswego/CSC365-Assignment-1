@@ -2,6 +2,7 @@ package com.example.brendan.mainpackage;
 
 import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
+
 import com.example.brendan.mainpackage.event.StartEvent;
 import com.example.brendan.mainpackage.onboarding.MainFragment;
 import com.example.brendan.mainpackage.onboarding.StartFragment;
@@ -72,6 +73,7 @@ public class MainActivity extends BaseActivity {
 
     /**
      * Receives startTime from StartFragment used for information in MainFragment
+     *
      * @param event EventBus CallBack event after post has been made
      */
     @Subscribe
@@ -81,11 +83,13 @@ public class MainActivity extends BaseActivity {
     }
 
     /**
-     *
      * @return startTime class variable
      */
     public String getStartTime() {
         return startTime;
     }
 
+    public boolean isDevMode() {
+        return true;
+    }
 }
