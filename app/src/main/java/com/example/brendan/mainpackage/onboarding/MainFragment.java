@@ -73,6 +73,9 @@ public class MainFragment extends BaseFragment {
     private TempAdapter adapter;
     private APIClass api;
 
+
+    private boolean callMade = false;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -195,10 +198,12 @@ public class MainFragment extends BaseFragment {
                 maxData = (i <= j) ? i : j;
             }
             postDataEvent(globalIndex);
-            if(adapter != null){
+            if (adapter != null) {
                 adapter.notifyDataSetChanged();
             }
+            callMade = true;
         }
+        dataResultsUUID = null;
     }
 
     /**
@@ -221,12 +226,9 @@ public class MainFragment extends BaseFragment {
      * Makes All API calls for dataResults of day specified in StartFragment
      *
      * @param index Index in the fipsList ArrayList for making API call.
-     * @param start String from StartFragment for start date.
-     * @param end   String from StartFragment for end date, which is same as start date since doing daily average temperature.
      */
-    private void postLocationEvent(int index, String start, String end) {
+    private void postLocationEvent(int index) {
         globalIndex = index;
-        dataResultsUUID = api.getData("GHCND", "TAVG", fipsList.get(index), start, end);
     }
 
     /**
@@ -253,7 +255,6 @@ public class MainFragment extends BaseFragment {
             temp = new TempItem(stateList.get(index), fipsList.get(index), null);
         }
         listItems.add(temp);
-
     }
 
     /**
@@ -318,23 +319,28 @@ public class MainFragment extends BaseFragment {
         protected Void doInBackground(final String... strings) {
             int l = 0;
             while (l < ecList.size()) {
-                if (l % 5 == 0) {
+                System.out.println("Background task " + l);
+                dataResultsUUID = api.getData("GHCND", "TAVG", fipsList.get(globalIndex), startTime, endTime);
+                while (!callMade) {
                     try {
-                        Thread.sleep(1100);
-                        postLocationEvent(l, strings[0], strings[1]);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                } else {
-                    try {
-                        Thread.sleep(1500);
-                        postLocationEvent(l, strings[0], strings[1]);
+                        Thread.sleep(50);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }
                 }
+                try {
+                    Thread.sleep(1200);
+                    postLocationEvent(l);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                callMade = false;
                 l++;
+                if (l < ecList.size()) {
+                    globalIndex++;
+                }
             }
+
             finished = true;
             getActivity().runOnUiThread(new Runnable() {
                 @Override
