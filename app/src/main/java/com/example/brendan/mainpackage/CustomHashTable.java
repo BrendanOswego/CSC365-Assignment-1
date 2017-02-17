@@ -48,7 +48,7 @@ public class CustomHashTable<K, V> {
      * @param value Value that key will store.
      */
     public void insert(K key, V value) {
-        int j = Math.abs(key.hashCode() % slots);
+        int j = Math.abs(key.hashCode() % hashTable.length);
         HashEntry head = hashTable[j];
         HashEntry temp = new HashEntry(key, value);
         if (head == null) {
@@ -61,6 +61,24 @@ public class CustomHashTable<K, V> {
             head.next = temp;
         }
 
+        if (size >= (hashTable.length * loadFactor)) {
+            resize();
+        }
+    }
+
+    /**
+     * Resizes the hashTable
+     */
+    private void resize() {
+        HashEntry[] newTable = hashTable;
+        hashTable = new HashEntry[hashTable.length * 2];
+        for (int i = 0; i < hashTable.length; i++) {
+            HashEntry newEntry = newTable[i];
+            while (newEntry != null) {
+                insert((K) newEntry.getKey(), (V) newEntry.getValue());
+                newEntry = newEntry.next;
+            }
+        }
     }
 
     /**
