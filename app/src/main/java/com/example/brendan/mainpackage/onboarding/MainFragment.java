@@ -31,6 +31,7 @@ import com.example.brendan.mainpackage.view.TempItem;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -152,6 +153,8 @@ public class MainFragment extends BaseFragment {
      */
     @Subscribe
     public void onLocationEvent(LocationEvent event) {
+        File dir = getActivity().getCacheDir();
+
         if (startTime != null) {
             if (event.getUuid().equals(this.locationUUID)) {
                 stateList = new ArrayList<>();
