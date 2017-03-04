@@ -1,9 +1,12 @@
 package com.example.brendan.mainpackage;
 
+import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
+import android.util.Log;
 import android.widget.Toast;
 
+import com.example.brendan.mainpackage.event.LocationEvent;
 import com.example.brendan.mainpackage.event.StartEvent;
 import com.example.brendan.mainpackage.model.DataModel;
 import com.example.brendan.mainpackage.model.LocationModel;
@@ -15,10 +18,13 @@ import com.google.gson.GsonBuilder;
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.UUID;
 
 /**
@@ -36,7 +42,7 @@ import java.util.UUID;
  * element that was clicked
  */
 public class MainActivity extends BaseActivity {
-
+    private static final String TAG = MainActivity.class.getName();
     private String startTime;
 
     @Override
@@ -104,47 +110,36 @@ public class MainActivity extends BaseActivity {
         System.out.println("Listened for StartEvent");
     }
 
-    void writeDataInternal(DataModel model, String name) {
+    public void writeDataInternal(DataModel model, String name) {
         File dir = getCacheDir();
         int count = dir.listFiles().length;
         count = count + 1;
         File file = new File(dir, "data_model_" + count);
         Gson gson = new Gson();
         String content = gson.toJson(model);
-        writeData(file, content);
-
     }
 
-    boolean writeLocationInternal(LocationModel model, String name) {
-        File dir = getCacheDir();
-        String outputName = "location_model_" + name;
-        File file = new File(dir, outputName);
-        if (!fileExists(file)) {
-            Gson gson = new Gson();
-            String content = gson.toJson(model);
-            writeData(file, content);
-        }
-        return false;
-    }
-
-    private void writeData(File file, String text) {
-        FileOutputStream fileOutputStream = null;
+    public void writeLocationInternal(LocationEvent event, String name) {
+        File dir = getFilesDir();
+        Log.v(TAG,"Files Directory: " + dir.getAbsolutePath());
+        File file = new File(dir, name);
+        Gson gson = new Gson();
+        String content = gson.toJson(event.getLocation());
+        Log.v(TAG, content);
+        Log.v(TAG,file.getAbsolutePath());
+        FileOutputStream outputStream;
         try {
-            fileOutputStream = new FileOutputStream(file);
-            fileOutputStream.write(text.getBytes());
-        } catch (IOException e) {
+            outputStream = openFileOutput(name, Context.MODE_PRIVATE);
+            outputStream.write(content.getBytes());
+            outputStream.close();
+            Log.v(TAG,"Data saved to " + file.getAbsolutePath());
+        } catch (Exception e) {
             e.printStackTrace();
-        } finally {
-            if (fileOutputStream != null) {
-                try {
-                    fileOutputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
         }
-        Toast.makeText(this, "Data saved to " + file.getAbsolutePath(), Toast.LENGTH_LONG).show();
+
     }
+
+
 
     /**
      * @return startTime class variable
@@ -154,16 +149,27 @@ public class MainActivity extends BaseActivity {
     }
 
     public boolean isDevMode() {
-        return true;
+        return false;
     }
 
-    private boolean fileExists(File f) {
-        File dir = getCacheDir();
-        for (int i = 0; i < dir.listFiles().length; i++) {
-            if (dir.listFiles()[i].equals(f)) {
-                return true;
+    public boolean fileExists(File f) {
+        File dir = getFilesDir();
+        if (dir.exists()) {
+            for (File temp : dir.listFiles()) {
+                if (temp.equals(f)) {
+                    Log.v(TAG, "Temp file equals f");
+                    return true;
+                }
             }
+        } else {
+            Log.v(TAG,"cacheDir does not exist");
         }
+        Log.v(TAG,"fileExists return false");
         return false;
+    }
+
+
+    public void readLocationData(String name) throws IOException {
+        //TODO: Return LocationEvent object given the path name
     }
 }

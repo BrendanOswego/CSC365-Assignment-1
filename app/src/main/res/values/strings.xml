@@ -15,4 +15,6 @@
 
     <string name="date_picked" formatted="false">Information for %s</string>
     <string name="no_info">No Info</string>
+
+    <string name="location_write_format" formatted="false">location_model_%s.json</string>
 </resources>

@@ -1,8 +1,11 @@
 package com.example.brendan.mainpackage.onboarding;
 
+import android.annotation.TargetApi;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -32,6 +35,7 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -46,6 +50,8 @@ import butterknife.Unbinder;
  * using CustomHashTable class for Assignment.
  */
 public class MainFragment extends BaseFragment {
+    private static final String TAG = MainFragment.class.getName();
+
     @BindView(R.id.tv_date_picked)
     TextView datePicked;
     @BindView(R.id.frame_main)
@@ -96,7 +102,14 @@ public class MainFragment extends BaseFragment {
             table = new CustomHashTable<>();
             api = APIClass.getInstance();
             api.init(getActivity());
-            locationUUID = api.getAllStates();
+            File dir = getActivity().getFilesDir();
+            String name = String.format(getString(R.string.location_write_format), startTime);
+            File f = new File(dir, name);
+            if (f.exists()) {
+                Log.v(TAG, "File already exists");
+            } else {
+                locationUUID = api.getAllStates();
+            }
             listView.setOnItemClickListener(listViewClickListener);
             listItems = new ArrayList<>();
 
@@ -152,9 +165,9 @@ public class MainFragment extends BaseFragment {
      * @param event LocationEvent post created after APIClass CallBack from Web Service.
      */
     @Subscribe
-    public void onLocationEvent(LocationEvent event) {
-        File dir = getActivity().getCacheDir();
-
+    public void onLocationEvent(LocationEvent event){
+        String name = String.format(getString(R.string.location_write_format), startTime);
+        ((MainActivity)getActivity()).writeLocationInternal(event,name);
         if (startTime != null) {
             if (event.getUuid().equals(this.locationUUID)) {
                 stateList = new ArrayList<>();
@@ -308,6 +321,7 @@ public class MainFragment extends BaseFragment {
     /**
      * Private inner class for handling  Asynchronous Data API calls since cannot happen on Main Thread, based off of the laws of Android development.
      */
+    @TargetApi(Build.VERSION_CODES.CUPCAKE)
     private class FIPSTask extends AsyncTask<String, Void, Void> {
         private boolean finished = false;
 
