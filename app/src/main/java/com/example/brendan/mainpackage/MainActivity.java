@@ -25,6 +25,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.lang.reflect.Type;
 import java.util.UUID;
 
 /**
@@ -169,7 +170,23 @@ public class MainActivity extends BaseActivity {
     }
 
 
-    public void readLocationData(String name) throws IOException {
-        //TODO: Return LocationEvent object given the path name
+    public LocationModel readLocationData(String name) throws IOException {
+        FileInputStream iStream = openFileInput(name);
+        InputStreamReader isr = new InputStreamReader(iStream);
+        BufferedReader bufferedReader = new BufferedReader(isr);
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = bufferedReader.readLine()) != null) {
+            sb.append(line);
+        }
+        Log.v(TAG,sb.toString());
+        iStream.close();
+        isr.close();
+        bufferedReader.close();
+
+        Gson gson = new Gson();
+        LocationModel model = null;
+        
+        return model;
     }
 }

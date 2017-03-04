@@ -26,10 +26,12 @@ import com.example.brendan.mainpackage.event.DataEvent;
 import com.example.brendan.mainpackage.event.FinishEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
 import com.example.brendan.mainpackage.model.DataResults;
+import com.example.brendan.mainpackage.model.LocationModel;
 import com.example.brendan.mainpackage.model.Metadata;
 import com.example.brendan.mainpackage.model.Result;
 import com.example.brendan.mainpackage.view.TempAdapter;
 import com.example.brendan.mainpackage.view.TempItem;
+import com.google.gson.Gson;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -107,11 +109,17 @@ public class MainFragment extends BaseFragment {
             File f = new File(dir, name);
             if (f.exists()) {
                 Log.v(TAG, "File already exists");
+                try {
+                    LocationModel model = ((MainActivity)getActivity()).readLocationData(name);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             } else {
                 locationUUID = api.getAllStates();
             }
             listView.setOnItemClickListener(listViewClickListener);
             listItems = new ArrayList<>();
+
 
         }
         return view;
