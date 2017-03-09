@@ -14,6 +14,7 @@ import com.example.brendan.mainpackage.onboarding.MainFragment;
 import com.example.brendan.mainpackage.onboarding.StartFragment;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.stream.JsonReader;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
@@ -170,12 +171,14 @@ public class MainActivity extends BaseActivity {
     }
 
 
-    public LocationModel readLocationData(String name) throws IOException {
+    public LocationModel readLocationModel(String name) throws IOException {
         FileInputStream iStream = openFileInput(name);
         InputStreamReader isr = new InputStreamReader(iStream);
+        /*
         BufferedReader bufferedReader = new BufferedReader(isr);
         StringBuilder sb = new StringBuilder();
         String line;
+
         while ((line = bufferedReader.readLine()) != null) {
             sb.append(line);
         }
@@ -183,10 +186,9 @@ public class MainActivity extends BaseActivity {
         iStream.close();
         isr.close();
         bufferedReader.close();
-
+        */
         Gson gson = new Gson();
-        LocationModel model = null;
-        
-        return model;
+        JsonReader reader = new JsonReader(isr);
+        return gson.fromJson(reader,LocationModel.class);
     }
 }

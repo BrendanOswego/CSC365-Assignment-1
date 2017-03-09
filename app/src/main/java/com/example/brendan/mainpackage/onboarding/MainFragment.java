@@ -104,23 +104,25 @@ public class MainFragment extends BaseFragment {
             table = new CustomHashTable<>();
             api = APIClass.getInstance();
             api.init(getActivity());
+            listView.setOnItemClickListener(listViewClickListener);
+            listItems = new ArrayList<>();
             File dir = getActivity().getFilesDir();
             String name = String.format(getString(R.string.location_write_format), startTime);
             File f = new File(dir, name);
             if (f.exists()) {
                 Log.v(TAG, "File already exists");
+                api.showDialog("Loading Cached Locations", false);
                 try {
-                    LocationModel model = ((MainActivity)getActivity()).readLocationData(name);
+                    LocationModel model = ((MainActivity)getActivity()).readLocationModel(name);
+                    api.closeDialog();
+                    postLocationEvent(model);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             } else {
+                api.showDialog("Loading new Locations",false);
                 locationUUID = api.getAllStates();
             }
-            listView.setOnItemClickListener(listViewClickListener);
-            listItems = new ArrayList<>();
-
-
         }
         return view;
     }
@@ -178,29 +180,8 @@ public class MainFragment extends BaseFragment {
         ((MainActivity)getActivity()).writeLocationInternal(event,name);
         if (startTime != null) {
             if (event.getUuid().equals(this.locationUUID)) {
-                stateList = new ArrayList<>();
-                List<Result> locationResults = event.getLocation().getResults();
-                Metadata md_location = event.getLocation().getMetadata();
-                int i = md_location.getResultset().getCount();
-                int j = md_location.getResultset().getLimit();
-                int count = (i <= j) ? i : j;
-                for (int k = 0; k < count; k++) {
-                    if (!fipsList.contains(locationResults.get(k).getId())) {
-                        for (int x = 0; x < ecList.size(); x++) {
-                            if (ecList.getList().get(x).equals(locationResults.get(k).getName())) {
-                                fipsList.add(locationResults.get(k).getId());
-                                stateList.add(locationResults.get(k).getName());
-                                locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
-                            }
-                        }
-                    }
-                }
-                api.showDialog("Searching for Temperatures", true);
-                FIPSTask task = new FIPSTask();
-                String[] dates = new String[2];
-                dates[0] = startTime;
-                dates[1] = endTime;
-                task.execute(dates);
+                LocationModel model = event.getLocation();
+                postLocationEvent(model);
             }
         }
 
@@ -246,15 +227,36 @@ public class MainFragment extends BaseFragment {
         }
     }
 
-    /**
-     * Makes All API calls for dataResults of day specified in StartFragment
-     *
-     * @param index Index in the fipsList ArrayList for making API call.
-     */
-    private void postLocationEvent(int index) {
-        globalIndex = index;
+    private void postLocationEvent(LocationModel model) {
+        stateList = new ArrayList<>();
+        List<Result> locationResults = model.getResults();
+        Metadata md_location = model.getMetadata();
+        int i = md_location.getResultset().getCount();
+        int j = md_location.getResultset().getLimit();
+        int count = (i <= j) ? i : j;
+        for (int k = 0; k < count; k++) {
+            if (!fipsList.contains(locationResults.get(k).getId())) {
+                for (int x = 0; x < ecList.size(); x++) {
+                    if (ecList.getList().get(x).equals(locationResults.get(k).getName())) {
+                        fipsList.add(locationResults.get(k).getId());
+                        stateList.add(locationResults.get(k).getName());
+                        locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
+                    }
+                }
+            }
+        }
+
+        api.showDialog("Searching for Temperatures", true);
+        FIPSTask task = new FIPSTask();
+        String[] dates = new String[2];
+        dates[0] = startTime;
+        dates[1] = endTime;
+        task.execute(dates);
     }
 
+    private void setGlobalIndex(int index){
+        globalIndex = index;
+    }
     /**
      * Adds information to table CustomHashTable
      *
@@ -358,7 +360,7 @@ public class MainFragment extends BaseFragment {
                 }
                 try {
                     Thread.sleep(200);
-                    postLocationEvent(l);
+                    setGlobalIndex(l);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 }

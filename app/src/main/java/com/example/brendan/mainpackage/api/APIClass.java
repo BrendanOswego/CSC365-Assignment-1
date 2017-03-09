@@ -93,7 +93,6 @@ public class APIClass {
      * @return randomly generated UUID.
      */
     public UUID getAllStates() {
-        showDialog("Fetching Locations", false);
         final UUID uuid = UUID.randomUUID();
         Call<LocationModel> call = controller.getAllStates();
         call.enqueue(new Callback<LocationModel>() {
