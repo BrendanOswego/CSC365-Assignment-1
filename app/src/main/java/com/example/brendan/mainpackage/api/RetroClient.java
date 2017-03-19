@@ -31,7 +31,7 @@ class RetroClient {
      */
     static Retrofit getClient(String baseUrl) {
         HttpLoggingInterceptor logger = new HttpLoggingInterceptor();
-        logger.setLevel(HttpLoggingInterceptor.Level.NONE);
+        logger.setLevel(HttpLoggingInterceptor.Level.BODY);
         Gson gson = new GsonBuilder()
                 .setDateFormat("yyyy-MM-dd")
                 .create();

@@ -13,7 +13,7 @@ import retrofit2.http.Query;
 
 interface RetroInterface {
 
-    @GET("data?limit=50&units=standard")
+    @GET("data?limit=100&units=standard")
     Call<DataModel> getData(@Query("datasetid") String id,
                             @Query("datatypeid")String datatypeid,
                             @Query("locationid")String locationId,

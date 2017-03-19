@@ -1,4 +1,4 @@
-package com.example.brendan.mainpackage.onboarding;
+package com.example.brendan.mainpackage;
 
 import android.annotation.TargetApi;
 import android.os.AsyncTask;
@@ -16,29 +16,40 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.brendan.mainpackage.BaseFragment;
-import com.example.brendan.mainpackage.CustomHashTable;
-import com.example.brendan.mainpackage.EastCoastList;
-import com.example.brendan.mainpackage.MainActivity;
-import com.example.brendan.mainpackage.R;
+import com.example.brendan.mainpackage.datastrctures.BTree;
+import com.example.brendan.mainpackage.datastrctures.CustomHashTable;
 import com.example.brendan.mainpackage.api.APIClass;
+import com.example.brendan.mainpackage.datastrctures.HashEntry;
+import com.example.brendan.mainpackage.datastrctures.Node;
 import com.example.brendan.mainpackage.event.DataEvent;
 import com.example.brendan.mainpackage.event.FinishEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
+import com.example.brendan.mainpackage.model.DataEntries;
+import com.example.brendan.mainpackage.model.DataModel;
 import com.example.brendan.mainpackage.model.DataResults;
+import com.example.brendan.mainpackage.model.DayEntries;
 import com.example.brendan.mainpackage.model.LocationModel;
 import com.example.brendan.mainpackage.model.Metadata;
 import com.example.brendan.mainpackage.model.Result;
 import com.example.brendan.mainpackage.view.TempAdapter;
 import com.example.brendan.mainpackage.view.TempItem;
 import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -53,7 +64,7 @@ import butterknife.Unbinder;
  */
 public class MainFragment extends BaseFragment {
     private static final String TAG = MainFragment.class.getName();
-
+    private static final String locationJson = "location_model_1.json";
     @BindView(R.id.tv_date_picked)
     TextView datePicked;
     @BindView(R.id.frame_main)
@@ -69,6 +80,7 @@ public class MainFragment extends BaseFragment {
     private UUID dataResultsUUID;
     private CustomHashTable<String, String> locationTable;
     private CustomHashTable<String, Double> table;
+    private CustomHashTable<String, Double> dataHash;
     private List<DataResults> dataResults;
     private EastCoastList ecList = new EastCoastList();
     private ArrayList<String> stateList;
@@ -81,8 +93,9 @@ public class MainFragment extends BaseFragment {
     private TempAdapter adapter;
     private APIClass api;
 
-
     private boolean callMade = false;
+    DayEntries newEntry;
+    ArrayList<DataEntries> dataList;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -95,6 +108,8 @@ public class MainFragment extends BaseFragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         final View view = inflater.inflate(R.layout.fragment_main, container, false);
         unbinder = ButterKnife.bind(this, view);
+        newEntry = new DayEntries();
+        dataList = new ArrayList<>();
         if (savedInstanceState == null) {
             mainFrame.setVisibility(View.GONE);
             startTime = ((MainActivity) getActivity()).getStartTime();
@@ -102,25 +117,24 @@ public class MainFragment extends BaseFragment {
             fipsList = new ArrayList<>();
             locationTable = new CustomHashTable<>();
             table = new CustomHashTable<>();
+            dataHash = new CustomHashTable<>();
             api = APIClass.getInstance();
             api.init(getActivity());
             listView.setOnItemClickListener(listViewClickListener);
             listItems = new ArrayList<>();
             File dir = getActivity().getFilesDir();
-            String name = String.format(getString(R.string.location_write_format), startTime);
-            File f = new File(dir, name);
+            File f = new File(dir, locationJson);
             if (f.exists()) {
-                Log.v(TAG, "File already exists");
                 api.showDialog("Loading Cached Locations", false);
                 try {
-                    LocationModel model = ((MainActivity)getActivity()).readLocationModel(name);
+                    LocationModel model = ((MainActivity) getActivity()).readLocationModel(locationJson);
                     api.closeDialog();
-                    postLocationEvent(model);
+                    postLocationEvent(model, false);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             } else {
-                api.showDialog("Loading new Locations",false);
+                api.showDialog("Loading new Locations", false);
                 locationUUID = api.getAllStates();
             }
         }
@@ -175,14 +189,17 @@ public class MainFragment extends BaseFragment {
      * @param event LocationEvent post created after APIClass CallBack from Web Service.
      */
     @Subscribe
-    public void onLocationEvent(LocationEvent event){
+    public void onLocationEvent(LocationEvent event) throws IOException {
         String name = String.format(getString(R.string.location_write_format), startTime);
-        ((MainActivity)getActivity()).writeLocationInternal(event,name);
-        if (startTime != null) {
-            if (event.getUuid().equals(this.locationUUID)) {
-                LocationModel model = event.getLocation();
-                postLocationEvent(model);
+        LocationModel model = event.getLocation();
+        if (((MainActivity) getActivity()).writeLocationInternal(model)) {
+            if (startTime != null) {
+                if (event.getUuid().equals(this.locationUUID)) {
+                    postLocationEvent(model, true);
+                }
             }
+        } else {
+            postLocationEvent(model, false);
         }
 
     }
@@ -193,22 +210,11 @@ public class MainFragment extends BaseFragment {
      * @param event DataEvent post created after APIClass CallBack from Web Service.
      */
     @Subscribe
-    public void onDataEvent(DataEvent event) {
+    public void onDataEvent(DataEvent event) throws JSONException, IOException {
         if (event.getUuid().equals(this.dataResultsUUID)) {
-            dataResults = event.getDataModel().getResults();
-            Metadata md = event.getDataModel().getMetadata();
-            if (dataResults != null) {
-                int i = md.getResultset().getCount();
-                int j = md.getResultset().getLimit();
-                maxData = (i <= j) ? i : j;
-            }
-            postDataEvent(globalIndex);
-            if (adapter != null) {
-                adapter.notifyDataSetChanged();
-            }
-            callMade = true;
+            DataModel model = event.getDataModel();
+            postDataEvent(model, globalIndex);
         }
-        dataResultsUUID = null;
     }
 
     /**
@@ -217,70 +223,134 @@ public class MainFragment extends BaseFragment {
      * @param event FinishEvent post created after FIPSTask has returned null in doInBackground().
      */
     @Subscribe
-    public void onFinishedEvent(FinishEvent event) {
+    public void onFinishedEvent(FinishEvent event) throws IOException {
         if (event.isFinished()) {
             adapter = new TempAdapter(getContext(), listItems);
             listView.setAdapter(adapter);
             String text = String.format(getResources().getString(R.string.date_picked), startTime);
             datePicked.setText(text);
             mainFrame.setVisibility(View.VISIBLE);
+            newEntry.setDataEntries(dataList);
+            newEntry.setDate(startTime);
+            ((MainActivity) getActivity()).writeKeyValueData(newEntry, startTime);
         }
     }
 
-    private void postLocationEvent(LocationModel model) {
-        stateList = new ArrayList<>();
-        List<Result> locationResults = model.getResults();
-        Metadata md_location = model.getMetadata();
-        int i = md_location.getResultset().getCount();
-        int j = md_location.getResultset().getLimit();
-        int count = (i <= j) ? i : j;
-        for (int k = 0; k < count; k++) {
-            if (!fipsList.contains(locationResults.get(k).getId())) {
-                for (int x = 0; x < ecList.size(); x++) {
-                    if (ecList.getList().get(x).equals(locationResults.get(k).getName())) {
-                        fipsList.add(locationResults.get(k).getId());
-                        stateList.add(locationResults.get(k).getName());
-                        locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
+    private void postLocationEvent(LocationModel model, boolean state) throws IOException {
+        if (state) {
+            stateList = new ArrayList<>();
+            List<Result> locationResults = model.getResults();
+            Metadata md_location = model.getMetadata();
+            int i = md_location.getResultset().getCount();
+            int j = md_location.getResultset().getLimit();
+            int count = (i <= j) ? i : j;
+            for (int k = 0; k < count; k++) {
+                if (!fipsList.contains(locationResults.get(k).getId())) {
+                    for (int x = 0; x < ecList.size(); x++) {
+                        if (ecList.getList().get(x).equals(locationResults.get(k).getName())) {
+                            fipsList.add(locationResults.get(k).getId());
+                            stateList.add(locationResults.get(k).getName());
+                            locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
+                        }
+                    }
+                }
+            }
+        } else {
+            stateList = new ArrayList<>();
+            LocationModel cached_model = ((MainActivity) getActivity()).readLocationModel(locationJson);
+            List<Result> locationResults = cached_model.getResults();
+            Metadata md_location = cached_model.getMetadata();
+            int i = md_location.getResultset().getCount();
+            int j = md_location.getResultset().getLimit();
+            int count = (i <= j) ? i : j;
+            for (int k = 0; k < count; k++) {
+                if (!fipsList.contains(locationResults.get(k).getId())) {
+                    for (int x = 0; x < ecList.size(); x++) {
+                        if (ecList.getList().get(x).equals(locationResults.get(k).getName())) {
+                            fipsList.add(locationResults.get(k).getId());
+                            stateList.add(locationResults.get(k).getName());
+                            locationTable.insert(locationResults.get(k).getName(), locationResults.get(k).getId());
+                        }
                     }
                 }
             }
         }
-
-        api.showDialog("Searching for Temperatures", true);
-        FIPSTask task = new FIPSTask();
-        String[] dates = new String[2];
-        dates[0] = startTime;
-        dates[1] = endTime;
-        task.execute(dates);
+        if (((MainActivity) getActivity()).entryExists(startTime)) {
+            api.showDialog("Loading cached data", false);
+            ArrayList<DataEntries> tempList = ((MainActivity) getActivity()).getDataEntries(startTime);
+            Log.v(TAG, "SIZE: " + tempList.size());
+            //TODO:Populate ListView
+            TempItem temp;
+            adapter = new TempAdapter(getContext(), listItems);
+            listView.setAdapter(adapter);
+            for (int l = 0; l < tempList.size(); l++) {
+                temp = new TempItem(ecList.getList().get(l), tempList.get(l).getKey(), tempList.get(l).getValue());
+                table.insert(tempList.get(l).getKey(), tempList.get(l).getValue());
+                listItems.add(temp);
+            }
+            if (adapter != null) {
+                adapter.notifyDataSetChanged();
+            }
+            String text = String.format(getResources().getString(R.string.date_picked), startTime);
+            datePicked.setText(text);
+            mainFrame.setVisibility(View.VISIBLE);
+            api.closeDialog();
+        } else {
+            api.showDialog("Searching for Temperatures", true);
+            FIPSTask task = new FIPSTask();
+            String[] dates = new String[2];
+            dates[0] = startTime;
+            dates[1] = endTime;
+            task.execute(dates);
+        }
     }
 
-    private void setGlobalIndex(int index){
+    private void setGlobalIndex(int index) {
         globalIndex = index;
     }
+
     /**
-     * Adds information to table CustomHashTable
+     * Adds information to table CustomHashTable (Assignment 1)
      *
      * @param index index from fipsList ArrayList
      */
-    private void postDataEvent(int index) {
-        double total = 0;
+    private void postDataEvent(DataModel model, int index) throws JSONException, IOException {
+        dataResults = model.getResults();
+        Metadata md = model.getMetadata();
+        if (dataResults != null) {
+            int i = md.getResultset().getCount();
+            int j = md.getResultset().getLimit();
+            maxData = (i <= j) ? i : j;
+        }
+        double total = 0.0;
         int tempStations = 0;
         TempItem temp;
         if (dataResults != null) {
             for (int i = 0; i < maxData; i++) {
                 if (dataResults.get(i).getDatatype().equals("TAVG")) {
+                    Double value = dataResults.get(i).getValue();
+                    String station = dataResults.get(i).getStation();
+                    dataHash.insert(station, value);
                     total += dataResults.get(i).getValue();
                     ++tempStations;
                 }
             }
             total = total / tempStations;
-            System.out.println("Total for index " + index + "==" + total);
             table.insert(fipsList.get(index), total);
             temp = new TempItem(stateList.get(index), fipsList.get(index), total);
         } else {
             temp = new TempItem(stateList.get(index), fipsList.get(index), null);
         }
         listItems.add(temp);
+        if (adapter != null) {
+            adapter.notifyDataSetChanged();
+        }
+        callMade = true;
+        //Grab the entire table and traverse through to find nonempty
+        DataEntries dataEntry = new DataEntries();
+        dataEntry.setKey(fipsList.get(index));
+        dataEntry.setValue(total);
+        dataList.add(dataEntry);
     }
 
     /**

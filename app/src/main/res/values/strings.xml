@@ -17,4 +17,5 @@
     <string name="no_info">No Info</string>
 
     <string name="location_write_format" formatted="false">location_model_%s.json</string>
+    <string name="data_write_format" formatted="false">data_model_%s.txt</string>
 </resources>

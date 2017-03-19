@@ -1,33 +1,32 @@
 package com.example.brendan.mainpackage;
 
-import android.content.Context;
 import android.os.Bundle;
 import android.support.v4.app.FragmentManager;
 import android.util.Log;
-import android.widget.Toast;
 
-import com.example.brendan.mainpackage.event.LocationEvent;
+import com.example.brendan.mainpackage.event.DataEvent;
 import com.example.brendan.mainpackage.event.StartEvent;
-import com.example.brendan.mainpackage.model.DataModel;
+import com.example.brendan.mainpackage.model.DataEntries;
+import com.example.brendan.mainpackage.model.DayEntries;
+import com.example.brendan.mainpackage.model.JsonModel;
 import com.example.brendan.mainpackage.model.LocationModel;
-import com.example.brendan.mainpackage.onboarding.MainFragment;
 import com.example.brendan.mainpackage.onboarding.StartFragment;
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
 import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.lang.reflect.Type;
-import java.util.UUID;
+import java.io.Writer;
+import java.util.ArrayList;
 
 /**
  * Main Activity that handles Fragment Navigation and the StartEvent event.
@@ -45,7 +44,16 @@ import java.util.UUID;
  */
 public class MainActivity extends BaseActivity {
     private static final String TAG = MainActivity.class.getName();
+    private static final String masterJson = "master_test_5.json";
+    private static final String locationJson = "location_model_1.json";
     private String startTime;
+    private JsonModel master;
+
+    enum EntryStatus {
+        ADDED,
+        EXISTS,
+        NEW_FILE
+    }
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -109,38 +117,85 @@ public class MainActivity extends BaseActivity {
     @Subscribe
     public void onStartEvent(StartEvent event) {
         startTime = event.getTime();
-        System.out.println("Listened for StartEvent");
     }
 
-    public void writeDataInternal(DataModel model, String name) {
+    public void writeDataInternal(DataEvent event, String name) {
         File dir = getCacheDir();
-        int count = dir.listFiles().length;
-        count = count + 1;
-        File file = new File(dir, "data_model_" + count);
-        Gson gson = new Gson();
-        String content = gson.toJson(model);
-    }
-
-    public void writeLocationInternal(LocationEvent event, String name) {
-        File dir = getFilesDir();
-        Log.v(TAG,"Files Directory: " + dir.getAbsolutePath());
         File file = new File(dir, name);
         Gson gson = new Gson();
-        String content = gson.toJson(event.getLocation());
+        String content = gson.toJson(event.getDataModel());
         Log.v(TAG, content);
-        Log.v(TAG,file.getAbsolutePath());
         FileOutputStream outputStream;
         try {
-            outputStream = openFileOutput(name, Context.MODE_PRIVATE);
+            outputStream = new FileOutputStream(file, true);
             outputStream.write(content.getBytes());
             outputStream.close();
-            Log.v(TAG,"Data saved to " + file.getAbsolutePath());
+            Log.v(TAG, "Data saved to " + file.getAbsolutePath());
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    public boolean writeLocationInternal(LocationModel model) throws IOException {
+        File dir = getFilesDir();
+        File file = new File(dir, locationJson);
+        Gson gson = new Gson();
+        Writer writer;
+        if (file.exists()) {
+            return false;
+        } else {
+            writer = new FileWriter(file.getAbsolutePath());
+            gson.toJson(model, writer);
+            writer.flush();
+            writer.close();
+            return true;
         }
 
     }
 
+    public EntryStatus writeKeyValueData(DayEntries newEntry, String date) throws IOException {
+        //TODO: append to file that already has stored information about days already searched
+        File dir = getFilesDir();
+        File file = new File(dir, masterJson);
+        Gson gson = new Gson();
+        String content;
+        JsonModel master;
+        Writer writer = null;
+        BufferedWriter buffer;
+        if (!file.exists()) {
+            Log.v(TAG, "Creating new json file");
+            master = new JsonModel();
+            ArrayList<DayEntries> temp_day = new ArrayList<>();
+            ArrayList<DataEntries> temp_data;
+            temp_day.add(newEntry);
+            temp_data = newEntry.getDataEntries();
+            master.setDays(temp_day);
+            master.getDays().get(0).setDataEntries(temp_data);
+            writer = new FileWriter(file.getAbsolutePath());
+            buffer = new BufferedWriter(writer);
+            gson.toJson(master, buffer);
+            buffer.close();
+            writer.close();
+            return EntryStatus.NEW_FILE;
+        } else {
+            //TODO:Check if date is already added
+            Log.v(TAG, "Attempting to append data");
+            if (entryExists(date)) {
+                return EntryStatus.EXISTS;
+            }
+            master = getMaster(masterJson);
+            master.getDays().add(newEntry);
+            int size = master.getDays().size() - 1;
+            master.getDays().get(size).setDate(date);
+            writer = new FileWriter(file.getAbsolutePath());
+            buffer = new BufferedWriter(writer);
+            gson.toJson(master, buffer);
+            readData(masterJson);
+            buffer.close();
+            writer.close();
+            return EntryStatus.ADDED;
+        }
+    }
 
 
     /**
@@ -154,41 +209,71 @@ public class MainActivity extends BaseActivity {
         return false;
     }
 
-    public boolean fileExists(File f) {
-        File dir = getFilesDir();
-        if (dir.exists()) {
-            for (File temp : dir.listFiles()) {
-                if (temp.equals(f)) {
-                    Log.v(TAG, "Temp file equals f");
-                    return true;
-                }
-            }
-        } else {
-            Log.v(TAG,"cacheDir does not exist");
-        }
-        Log.v(TAG,"fileExists return false");
-        return false;
-    }
-
-
     public LocationModel readLocationModel(String name) throws IOException {
         FileInputStream iStream = openFileInput(name);
         InputStreamReader isr = new InputStreamReader(iStream);
-        /*
+        Gson gson = new Gson();
+        JsonReader reader = new JsonReader(isr);
+        return gson.fromJson(reader, LocationModel.class);
+    }
+
+    void setMaster(JsonModel master) {
+        this.master = master;
+    }
+
+    JsonModel getMaster(String name) throws IOException {
+        File dir = getFilesDir();
+        File file = new File(dir, masterJson);
+        if (!file.exists()) {
+            return null;
+        }
+        FileInputStream fis = openFileInput(name);
+        InputStreamReader isr = new InputStreamReader(fis);
         BufferedReader bufferedReader = new BufferedReader(isr);
         StringBuilder sb = new StringBuilder();
         String line;
-
         while ((line = bufferedReader.readLine()) != null) {
             sb.append(line);
         }
-        Log.v(TAG,sb.toString());
-        iStream.close();
-        isr.close();
-        bufferedReader.close();
-        */
+        String json = sb.toString();
+        Log.v(TAG, json);
         Gson gson = new Gson();
-        JsonReader reader = new JsonReader(isr);
-        return gson.fromJson(reader,LocationModel.class);
+        return gson.fromJson(json, JsonModel.class);
+    }
+
+    void readData(String name) throws IOException {
+        FileInputStream fis = openFileInput(name);
+        InputStreamReader isr = new InputStreamReader(fis);
+        BufferedReader bufferedReader = new BufferedReader(isr);
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = bufferedReader.readLine()) != null) {
+            sb.append(line);
+        }
+        String json = sb.toString();
+        Log.v(TAG, json);
+    }
+
+    public boolean entryExists(String date) throws IOException {
+        if (getMaster(masterJson) == null) {
+            return false;
+        }
+        JsonModel model = getMaster(masterJson);
+        for (int i = 0; i < model.getDays().size(); i++) {
+            if (model.getDays().get(i).getDate().equals(date)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public ArrayList<DataEntries> getDataEntries(String date) throws IOException {
+        JsonModel model = getMaster(masterJson);
+        for (int i = 0; i < model.getDays().size(); i++) {
+            if (model.getDays().get(i).getDate().equals(date)) {
+                return model.getDays().get(i).getDataEntries();
+            }
+        }
+        return null;
     }
 }

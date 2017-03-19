@@ -1,4 +1,4 @@
-package com.example.brendan.mainpackage;
+package com.example.brendan.mainpackage.datastrctures;
 
 /**
  * Using Algorithms and Functions based off of
@@ -132,57 +132,8 @@ public class CustomHashTable<K, V> {
         }
     }
 
-    /**
-     * @return size of hashTable.
-     */
-    public int getSize() {
-        return size;
+    public HashEntry<K,V>[] getHashTable(){
+        return this.hashTable;
     }
 
-    /**
-     * Method to resize hash table if table is filled up to loadFactor percentage.
-     */
-    private boolean needsToResize() {
-        return size >= (slots * loadFactor);
-    }
-
-    /**
-     * Generic inner class that structures the entries to be added to the hashTable.
-     *
-     * @param <K> Generic Key for class.
-     * @param <V> Generic Value for class.
-     */
-    private static class HashEntry<K, V> {
-
-        private K key;
-        private V value;
-        HashEntry<K, V> next;
-
-        /**
-         * Public constructor initializing variables.
-         *
-         * @param key   Assign key from constructor.
-         * @param value Assign value from constructor.
-         */
-        public HashEntry(K key, V value) {
-            this.key = key;
-            this.value = value;
-            next = null;
-        }
-
-        /**
-         * @return key generic value.
-         */
-        K getKey() {
-            return key;
-        }
-
-        /**
-         * @return value generic value.
-         */
-        V getValue() {
-            return value;
-        }
-
-    }
 }
