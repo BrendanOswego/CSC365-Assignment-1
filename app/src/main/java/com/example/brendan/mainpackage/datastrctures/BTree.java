@@ -3,21 +3,25 @@ package com.example.brendan.mainpackage.datastrctures;
 import java.io.Serializable;
 
 /**
- * Created by Brendan on 3/12/2017.
+ * Generic Binary Search Tree Class.
  */
 
-public class BTree implements Serializable {
+public class BTree<K extends Comparable<K>> implements Serializable{
 
-    Node root;
+    Node<K> root;
 
-    public int height(Node node){
-        if(node == null) return -1;
-        int left = height(node.left);
-        int right = height(node.right);
-        return (left >= right) ? left + 1 : right + 1;
+    public BTree(){
+        this.root = null;
     }
-    public void insert(Node n,double data){
 
+    Node<K> search(K key){
+        Node temp = root;
+        while(temp!= null){
+
+        }
+        return null;
     }
+
+
 
 }

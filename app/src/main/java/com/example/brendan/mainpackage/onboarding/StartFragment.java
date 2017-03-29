@@ -3,6 +3,7 @@ package com.example.brendan.mainpackage.onboarding;
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -29,7 +30,7 @@ import butterknife.Unbinder;
  * Fragment class for handling the start date chosen for the MainFragment API calls.
  */
 public class StartFragment extends BaseFragment {
-
+    private static final String TAG = BaseFragment.class.getName();
     @BindView(R.id.btn_start)
     Button startButton;
 
@@ -95,7 +96,6 @@ public class StartFragment extends BaseFragment {
         @SuppressLint("DefaultLocale")
         @Override
         public void onSelectedDayChange(@NonNull CalendarView view, int year, int month, int day) {
-
             Date date = new Date();
             Calendar cal = Calendar.getInstance();
             cal.setTime(date);
@@ -128,8 +128,8 @@ public class StartFragment extends BaseFragment {
                 startButton.setBackgroundColor(getResources().getColor(R.color.disabled));
             }
 
-
         }
+
 
     };
 

@@ -16,11 +16,8 @@ import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.example.brendan.mainpackage.datastrctures.BTree;
 import com.example.brendan.mainpackage.datastrctures.CustomHashTable;
 import com.example.brendan.mainpackage.api.APIClass;
-import com.example.brendan.mainpackage.datastrctures.HashEntry;
-import com.example.brendan.mainpackage.datastrctures.Node;
 import com.example.brendan.mainpackage.event.DataEvent;
 import com.example.brendan.mainpackage.event.FinishEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
@@ -33,23 +30,15 @@ import com.example.brendan.mainpackage.model.Metadata;
 import com.example.brendan.mainpackage.model.Result;
 import com.example.brendan.mainpackage.view.TempAdapter;
 import com.example.brendan.mainpackage.view.TempItem;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
+
 
 import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
-import org.json.JSONArray;
 import org.json.JSONException;
-import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -175,6 +164,8 @@ public class MainFragment extends BaseFragment {
         EventBus.getDefault().unregister(this);
     }
 
+
+
     /**
      * Send User back to beginning calling all necessary Android methods for re-initializing MainFragment.
      */
@@ -236,6 +227,13 @@ public class MainFragment extends BaseFragment {
         }
     }
 
+    /**
+     *
+     * @param model Model returned after API gets locations
+     * @param state Whether or not the locations API call has been made before,
+     *              if it has it will grab information from File stored in Files Directory
+     * @throws IOException
+     */
     private void postLocationEvent(LocationModel model, boolean state) throws IOException {
         if (state) {
             stateList = new ArrayList<>();
