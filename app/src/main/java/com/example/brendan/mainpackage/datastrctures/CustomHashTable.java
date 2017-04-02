@@ -66,19 +66,20 @@ public class CustomHashTable<K, V> {
         }
     }
 
-    /**
-     * Resizes the hashTable
-     */
+
     private void resize() {
-        HashEntry[] newTable = hashTable;
-        hashTable = new HashEntry[hashTable.length * 2];
+        HashEntry[] newtable = new HashEntry[hashTable.length * 2];
         for (int i = 0; i < hashTable.length; i++) {
-            HashEntry newEntry = newTable[i];
-            while (newEntry != null) {
-                insert((K) newEntry.getKey(), (V) newEntry.getValue());
-                newEntry = newEntry.next;
+            HashEntry list = hashTable[i];
+            while (list != null) {
+                HashEntry next = list.next;
+                int hash = (Math.abs(list.key.hashCode())) % newtable.length;
+                list.next = newtable[hash];
+                newtable[hash] = list;
+                list = next;
             }
         }
+        hashTable = newtable;
     }
 
     /**
@@ -132,7 +133,7 @@ public class CustomHashTable<K, V> {
         }
     }
 
-    public HashEntry<K,V>[] getHashTable(){
+    public HashEntry<K, V>[] getHashTable() {
         return this.hashTable;
     }
 

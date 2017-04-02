@@ -6,8 +6,11 @@ import android.util.Log;
 
 import com.example.brendan.mainpackage.event.DataEvent;
 import com.example.brendan.mainpackage.event.StartEvent;
+import com.example.brendan.mainpackage.model.CityEntries;
+import com.example.brendan.mainpackage.model.CityJson;
 import com.example.brendan.mainpackage.model.DSModel;
 import com.example.brendan.mainpackage.model.DataEntries;
+import com.example.brendan.mainpackage.model.DataModel;
 import com.example.brendan.mainpackage.model.DayEntries;
 import com.example.brendan.mainpackage.model.DayModel;
 import com.example.brendan.mainpackage.model.JsonModel;
@@ -54,6 +57,9 @@ public class MainActivity extends BaseActivity {
     private static final String TAG = MainActivity.class.getName();
     private static final String masterJson = "data_2.json";
     private static final String locationJson = "location_model_1.json";
+    private static final String allLocationsJson = "all_locations.json";
+    private static final String summerModel = "summer_model.json";
+    private static final String winterModel = "winterModel.json";
     private String startTime;
     private JsonModel master;
 
@@ -63,17 +69,29 @@ public class MainActivity extends BaseActivity {
         NEW_FILE
     }
 
+    enum CityStatus {
+        EXISTS,
+        ADDED,
+        CREATED
+    }
+
+    enum FileStatus {
+        CREATED,
+        ADDED,
+        EXISTS
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         EventBus.getDefault().register(this);
         if (savedInstanceState == null) {
-            if (getSupportFragmentManager().findFragmentByTag("startFragment") == null) {
-                BaseFragment f = new StartFragment();
+            if (getSupportFragmentManager().findFragmentByTag("selectionFragment") == null) {
+                BaseFragment f = new SelectionFragment();
                 getSupportFragmentManager()
                         .beginTransaction()
-                        .replace(R.id.fragment_container, f, "startFragment")
+                        .replace(R.id.fragment_container, f, "selectionFragment")
                         .commit();
             }
         } else {
@@ -109,6 +127,34 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+    public void navigateToCity() {
+        BaseFragment f = new CityFragment();
+        FragmentManager m = getSupportFragmentManager();
+        if (m.findFragmentByTag("cityFragment") == null) {
+            m.beginTransaction()
+                    .replace(R.id.fragment_container, f, "cityFragment")
+                    .commit();
+        } else {
+            m.beginTransaction()
+                    .replace(R.id.fragment_container, m.findFragmentByTag("cityFragment"))
+                    .commit();
+        }
+    }
+
+    public void navigateToSelection() {
+        BaseFragment f = new SelectionFragment();
+        FragmentManager m = getSupportFragmentManager();
+        if (m.findFragmentByTag("selectionFragment") == null) {
+            m.beginTransaction()
+                    .replace(R.id.fragment_container, f, "selectionFragment")
+                    .commit();
+        } else {
+            m.beginTransaction()
+                    .replace(R.id.fragment_container, m.findFragmentByTag("selectionFragment"))
+                    .commit();
+        }
+    }
+
     /**
      * Sends User to MainFragment
      */
@@ -129,7 +175,6 @@ public class MainActivity extends BaseActivity {
     }
 
     /**
-     *
      * @param model Model returned from API call.
      * @return Whether or not the Location File already exists
      * @throws IOException
@@ -144,17 +189,78 @@ public class MainActivity extends BaseActivity {
         } else {
             writer = new FileWriter(file.getAbsolutePath());
             gson.toJson(model, writer);
-            writer.flush();
             writer.close();
             return true;
         }
+    }
 
+    public void writeAllLocations(LocationModel model) throws IOException {
+        File dir = getFilesDir();
+        File file = new File(dir, allLocationsJson);
+        Gson gson = new Gson();
+        Writer writer = null;
+        try {
+            writer = new FileWriter(file.getAbsolutePath());
+            gson.toJson(model, writer);
+        } finally {
+            if (writer != null) writer.close();
+        }
+    }
+
+    public CityStatus writeCityFile(String url, DataModel model, String time) throws IOException {
+        File dir = getFilesDir();
+        File file = new File(dir, time);
+        Gson gson = new Gson();
+        CityJson json;
+        Writer writer = null;
+        BufferedWriter buffer = null;
+        if (file.exists()) {
+            try {
+                if (time.equals(summerModel)) {
+                    json = getSummerModel();
+                } else {
+                    json = getWinterModel();
+                }
+                CityEntries entry = new CityEntries();
+                entry.setKey(url);
+                if (model == null) {
+                    entry.setValue(new DataModel());
+                } else {
+                    entry.setValue(model);
+                }
+                entry.setValue(model);
+                json.getData().add(entry);
+                writer = new FileWriter(file.getAbsolutePath());
+                buffer = new BufferedWriter(writer);
+                gson.toJson(json, buffer);
+            } finally {
+                if (buffer != null) buffer.close();
+                if (writer != null) writer.close();
+            }
+            return CityStatus.ADDED;
+        } else {
+            try {
+                json = new CityJson();
+                ArrayList<CityEntries> list = new ArrayList<>();
+                CityEntries entry = new CityEntries();
+                entry.setKey(url);
+                entry.setValue(model);
+                list.add(entry);
+                json.setData(list);
+                writer = new FileWriter(file.getAbsolutePath());
+                buffer = new BufferedWriter(writer);
+                gson.toJson(json, buffer);
+            } finally {
+                if (buffer != null) buffer.close();
+                if (writer != null) writer.close();
+            }
+            return CityStatus.CREATED;
+        }
     }
 
     /**
-     *
      * @param newEntry Entry to be added to the Data File containing all Key Values for Hash-Based Cache
-     * @param date String for selected day used to check if the Data File contains the information already
+     * @param date     String for selected day used to check if the Data File contains the information already
      * @return Status of the added entry, i.e whether or not it was added or the entry already exists,
      * or needed to create a new File
      * @throws IOException
@@ -208,6 +314,7 @@ public class MainActivity extends BaseActivity {
 
     /**
      * Reads the Data File containing all Key Values to stdout
+     *
      * @throws FileNotFoundException
      */
     private void readData() throws FileNotFoundException {
@@ -237,6 +344,7 @@ public class MainActivity extends BaseActivity {
 
     /**
      * For use in debugging
+     *
      * @return Whether in developer mode or not
      */
     public boolean isDevMode() {
@@ -244,7 +352,6 @@ public class MainActivity extends BaseActivity {
     }
 
     /**
-     *
      * @param name File name to be searched in Files Directory
      * @return the LocationModel after Gson converts to Java Object
      * @throws FileNotFoundException
@@ -263,7 +370,6 @@ public class MainActivity extends BaseActivity {
     }
 
     /**
-     *
      * @param name File name to be search in Files Directory
      * @return the JsonModel of the File containing Json information for the Data
      * @throws FileNotFoundException
@@ -280,8 +386,45 @@ public class MainActivity extends BaseActivity {
         return gson.fromJson(isr, JsonModel.class);
     }
 
+    CityJson getSummerModel() throws FileNotFoundException {
+        File dir = getFilesDir();
+        File file = new File(dir, summerModel);
+        if (!file.exists()) {
+            return null;
+        }
+        Gson gson = new Gson();
+        FileInputStream fis = openFileInput(summerModel);
+        InputStreamReader isr = new InputStreamReader(fis);
+        return gson.fromJson(isr, CityJson.class);
+    }
+
+    CityJson getWinterModel() throws FileNotFoundException {
+        File dir = getFilesDir();
+        File file = new File(dir, winterModel);
+        if (!file.exists()) {
+            return null;
+        }
+        Gson gson = new Gson();
+        FileInputStream fis = openFileInput(winterModel);
+        InputStreamReader isr = new InputStreamReader(fis);
+        return gson.fromJson(isr, CityJson.class);
+    }
+
+    LocationModel getLocationModel() throws FileNotFoundException {
+        File dir = getFilesDir();
+        File file = new File(dir, allLocationsJson);
+        if (!file.exists()) {
+            return null;
+        }
+        Gson gson = new Gson();
+        FileInputStream fis = openFileInput(allLocationsJson);
+        InputStreamReader isr = new InputStreamReader(fis);
+        return gson.fromJson(isr, LocationModel.class);
+    }
+
     /**
      * Checks if data exists for a specified day chosen by the user.
+     *
      * @param date Date chosen by User
      * @return Whether or not data exists for specified date
      * @throws FileNotFoundException
@@ -300,8 +443,11 @@ public class MainActivity extends BaseActivity {
         return false;
     }
 
+    public boolean locationModelExists() throws FileNotFoundException {
+        return getLocationModel() != null;
+    }
+
     /**
-     *
      * @param date Date chosen by User
      * @return The List of DataEntries for a given date
      * @throws IOException

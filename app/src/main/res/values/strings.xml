@@ -12,6 +12,16 @@
     <string name="title_fips">FIPS ID</string>
     <string name="title_temp">Temp (F)</string>
 
+    <string name="title_city">City</string>
+    <string name="title_tmax">Temp (MAX)</string>
+    <string name="title_tavg">Temp (AVG)</string>
+    <string name="title_assign_1">Assignment 1</string>
+    <string name="title_assign_2">Assignment 2</string>
+
+    <string name="title_nav_selection">Back To Selection</string>
+    <string name="text_summer">Summer Data</string>
+    <string name="text_winter">Winter Data</string>
+
 
     <string name="date_picked" formatted="false">Information for %s</string>
     <string name="no_info">No Info</string>

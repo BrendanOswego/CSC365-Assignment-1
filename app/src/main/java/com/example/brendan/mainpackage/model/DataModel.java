@@ -1,5 +1,6 @@
 package com.example.brendan.mainpackage.model;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -9,7 +10,7 @@ import java.util.List;
 public class DataModel {
 
     private Metadata metadata;
-    private List<DataResults> results = null;
+    private ArrayList<DataResults> results = null;
 
     public Metadata getMetadata() {
         return metadata;
@@ -19,11 +20,11 @@ public class DataModel {
         this.metadata = metadata;
     }
 
-    public List<DataResults> getResults() {
+    public ArrayList<DataResults> getResults() {
         return results;
     }
 
-    public void setResults(List<DataResults> results) {
+    public void setResults(ArrayList<DataResults> results) {
         this.results = results;
     }
 }

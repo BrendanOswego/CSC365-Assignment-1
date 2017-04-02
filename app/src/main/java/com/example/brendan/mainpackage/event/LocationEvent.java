@@ -18,6 +18,9 @@ public class LocationEvent {
         this.uuid = uuid;
     }
 
+    public LocationEvent() {
+    }
+
     public LocationModel getLocation(){
         return this.model;
     }

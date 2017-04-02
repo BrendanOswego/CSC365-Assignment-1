@@ -70,7 +70,7 @@ public class MainFragment extends BaseFragment {
     private CustomHashTable<String, String> locationTable;
     private CustomHashTable<String, Double> table;
     private CustomHashTable<String, Double> dataHash;
-    private List<DataResults> dataResults;
+    private ArrayList<DataResults> dataResults;
     private EastCoastList ecList = new EastCoastList();
     private ArrayList<String> stateList;
     private int maxData;
@@ -85,6 +85,7 @@ public class MainFragment extends BaseFragment {
     private boolean callMade = false;
     DayEntries newEntry;
     ArrayList<DataEntries> dataList;
+    int max;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -114,7 +115,7 @@ public class MainFragment extends BaseFragment {
             File dir = getActivity().getFilesDir();
             File f = new File(dir, locationJson);
             if (f.exists()) {
-                api.showDialog("Loading Cached Locations", false);
+                api.showDialog("Loading Cached Locations", false,null);
                 try {
                     LocationModel model = ((MainActivity) getActivity()).readLocationModel(locationJson);
                     api.closeDialog();
@@ -123,7 +124,7 @@ public class MainFragment extends BaseFragment {
                     e.printStackTrace();
                 }
             } else {
-                api.showDialog("Loading new Locations", false);
+                api.showDialog("Loading new Locations", false,null);
                 locationUUID = api.getAllStates();
             }
         }
@@ -163,7 +164,6 @@ public class MainFragment extends BaseFragment {
         locationTable = null;
         EventBus.getDefault().unregister(this);
     }
-
 
 
     /**
@@ -215,20 +215,21 @@ public class MainFragment extends BaseFragment {
      */
     @Subscribe
     public void onFinishedEvent(FinishEvent event) throws IOException {
-        if (event.isFinished()) {
-            adapter = new TempAdapter(getContext(), listItems);
-            listView.setAdapter(adapter);
-            String text = String.format(getResources().getString(R.string.date_picked), startTime);
-            datePicked.setText(text);
-            mainFrame.setVisibility(View.VISIBLE);
-            newEntry.setDataEntries(dataList);
-            newEntry.setDate(startTime);
-            ((MainActivity) getActivity()).writeKeyValueData(newEntry, startTime);
+        if (event.getUuid().equals(this.dataResultsUUID)) {
+            if (event.isFinished()) {
+                adapter = new TempAdapter(getContext(), listItems);
+                listView.setAdapter(adapter);
+                String text = String.format(getResources().getString(R.string.date_picked), startTime);
+                datePicked.setText(text);
+                mainFrame.setVisibility(View.VISIBLE);
+                newEntry.setDataEntries(dataList);
+                newEntry.setDate(startTime);
+                ((MainActivity) getActivity()).writeKeyValueData(newEntry, startTime);
+            }
         }
     }
 
     /**
-     *
      * @param model Model returned after API gets locations
      * @param state Whether or not the locations API call has been made before,
      *              if it has it will grab information from File stored in Files Directory
@@ -242,6 +243,7 @@ public class MainFragment extends BaseFragment {
             int i = md_location.getResultset().getCount();
             int j = md_location.getResultset().getLimit();
             int count = (i <= j) ? i : j;
+            max = count;
             for (int k = 0; k < count; k++) {
                 if (!fipsList.contains(locationResults.get(k).getId())) {
                     for (int x = 0; x < ecList.size(); x++) {
@@ -274,7 +276,7 @@ public class MainFragment extends BaseFragment {
             }
         }
         if (((MainActivity) getActivity()).entryExists(startTime)) {
-            api.showDialog("Loading cached data", false);
+            api.showDialog("Loading cached data", false,max);
             ArrayList<DataEntries> tempList = ((MainActivity) getActivity()).getDataEntries(startTime);
             Log.v(TAG, "SIZE: " + tempList.size());
             //TODO:Populate ListView
@@ -294,7 +296,7 @@ public class MainFragment extends BaseFragment {
             mainFrame.setVisibility(View.VISIBLE);
             api.closeDialog();
         } else {
-            api.showDialog("Searching for Temperatures", true);
+            api.showDialog("Searching for Temperatures", true,max);
             FIPSTask task = new FIPSTask();
             String[] dates = new String[2];
             dates[0] = startTime;
@@ -450,7 +452,7 @@ public class MainFragment extends BaseFragment {
             getActivity().runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
-                    EventBus.getDefault().post(new FinishEvent(finished));
+                    EventBus.getDefault().post(new FinishEvent(finished, dataResultsUUID,null,false));
                 }
             });
 

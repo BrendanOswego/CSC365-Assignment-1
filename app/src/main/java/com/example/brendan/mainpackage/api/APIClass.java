@@ -3,6 +3,8 @@ package com.example.brendan.mainpackage.api;
 import android.app.ProgressDialog;
 import android.content.Context;
 
+import com.example.brendan.mainpackage.event.CityDataEvent;
+import com.example.brendan.mainpackage.event.CityLocationEvent;
 import com.example.brendan.mainpackage.event.DataEvent;
 import com.example.brendan.mainpackage.event.LocationEvent;
 import com.example.brendan.mainpackage.model.DataModel;
@@ -26,7 +28,7 @@ public class APIClass {
 
     private static APIClass instance;
     private Context context;
-    private ProgressDialog loading;
+    private ProgressDialog loading = null;
 
     /**
      * Singleton instance for calling APIClass.
@@ -68,12 +70,12 @@ public class APIClass {
         call.enqueue(new Callback<DataModel>() {
             @Override
             public void onResponse(Call<DataModel> call, Response<DataModel> response) {
-                DataEvent event;
+                CityDataEvent event;
                 if (response.isSuccessful()) {
-                    event = new DataEvent(uuid, response.body());
+                    event = new CityDataEvent(response.body(), uuid, call.request().url().toString());
                 } else {
                     int status = response.code();
-                    event = new DataEvent(uuid, null);
+                    event = new CityDataEvent(null, uuid, null);
                     System.out.println("Status Code: " + status);
                 }
                 EventBus.getDefault().post(event);
@@ -118,18 +120,45 @@ public class APIClass {
         return uuid;
     }
 
+    public UUID getAllLocations() {
+        final UUID uuid = UUID.randomUUID();
+        Call<LocationModel> call = controller.getAllLocations();
+        call.enqueue(new Callback<LocationModel>() {
+            @Override
+            public void onResponse(Call<LocationModel> call, Response<LocationModel> response) {
+                CityLocationEvent event;
+                if (response.isSuccessful()) {
+                    event = new CityLocationEvent(uuid, response.body(), call.request().url().toString());
+                } else {
+                    int status = response.code();
+                    event = new CityLocationEvent(uuid, null, null);
+                    System.out.println("Status Code: " + status);
+                }
+                closeDialog();
+                EventBus.getDefault().post(event);
+            }
+
+            @Override
+            public void onFailure(Call<LocationModel> call, Throwable t) {
+                t.printStackTrace();
+            }
+        });
+        return uuid;
+    }
+
+
     /**
      * Dialog method for APIClass when calls are waiting for a response.
      *
      * @param title String shown to user.
      */
-    public void showDialog(String title, boolean data) {
+    public void showDialog(String title, boolean data, Integer max) {
 
         loading = new ProgressDialog(context);
 
         if (data) {
             loading.setProgress(0);
-            loading.setMax(14);
+            loading.setMax(max);
             loading.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         } else {
             loading.setMessage("Fetching locations...");

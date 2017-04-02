@@ -22,7 +22,7 @@ class RetroClient {
 
     private static Retrofit retrofit = null;
     private static String token = "uamXrnjjrtNOgHDfeVYNBJthOJKiDqto";
-
+    private static String backup ="BsiBktYinBOkXQkeSGsiNVAPRzkGrzDo";
     /**
      * Sets up Retrofit Client with appropriate header information
      *
@@ -45,7 +45,7 @@ class RetroClient {
                 Request original = chain.request();
 
                 Request.Builder requestBuilder = original.newBuilder()
-                        .header("token", token);
+                        .header("token", backup);
 
                 Request request = requestBuilder.build();
                 return chain.proceed(request);

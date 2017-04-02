@@ -15,12 +15,15 @@ interface RetroInterface {
 
     @GET("data?limit=100&units=standard")
     Call<DataModel> getData(@Query("datasetid") String id,
-                            @Query("datatypeid")String datatypeid,
-                            @Query("locationid")String locationId,
-                            @Query("startdate")String startdate,
-                            @Query("enddate")String enddate);
+                            @Query("datatypeid") String datatypeid,
+                            @Query("locationid") String locationId,
+                            @Query("startdate") String startdate,
+                            @Query("enddate") String enddate);
 
     @GET("locations?locationcategoryid=ST&limit=52")
     Call<LocationModel> getAllStates();
+
+    @GET("locations?limit=1000")
+    Call<LocationModel> getAllLocations();
 
 }
