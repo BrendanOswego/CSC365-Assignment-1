@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/frame_city"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="match_parent"
+        android:layout_height="wrap_content"
         android:orientation="vertical">
 
         <LinearLayout
@@ -18,31 +17,15 @@
 
             <Button
                 android:layout_weight="1"
-                android:id="@+id/btn_nav_selection"
+                android:id="@+id/btn_nav_back_cluster"
                 android:layout_width="160dp"
-                android:layout_height="35dp"
+                android:layout_height="50dp"
                 android:text="@string/title_nav_selection" />
 
-            <Button
-                android:id="@+id/btn_nav_cluster"
-                android:layout_weight="1"
-                android:layout_width="160dp"
-                android:layout_height="35dp"
-                android:text="@string/clustering_button" />
-        </LinearLayout>
-
-        <LinearLayout
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:gravity="center"
-            android:orientation="horizontal">
-
-            <Button
-                android:id="@+id/btn_summer"
-                android:layout_width="140dp"
-                android:layout_height="35dp"
-                android:text="@string/text_summer" />
+            <Spinner
+                android:id="@+id/spinner_cluster"
+                android:layout_width="150dp"
+                android:layout_height="50dp" />
 
         </LinearLayout>
 
@@ -81,10 +64,11 @@
         </LinearLayout>
 
         <ListView
-            android:id="@+id/listview_city"
+            android:id="@+id/listview_cluster"
             android:layout_width="match_parent"
             android:layout_height="200dp" />
 
     </LinearLayout>
+
 
 </FrameLayout>

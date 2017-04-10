@@ -1,83 +1,82 @@
 package com.example.brendan.mainpackage.datastrctures;
 
-import android.support.annotation.NonNull;
-
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.Serializable;
-import java.util.ArrayList;
 
 /**
- * Created by Brendan on 3/12/2017.
+ * Created by brendan on 4/10/17.
  */
 
 public class Node implements Serializable {
+    private static final String TAG = Node.class.getName();
+    public int index;
+    int n;
+    int t;
+    String keys[];
+    int children[];
+    boolean leaf;
+    BTree tree;
 
-    int index; //Index in RAF
-    int t; //Degree of the BTree
-    int n; //number of keys in node
-    boolean leaf; //is leaf
-    String[] keys; //array of keys
-    Node[] children; //child nodes in this node
-
-    public Node(int t, boolean leaf) {
+    Node(int t, boolean leaf, BTree tree) {
         this.t = t;
-        this.leaf = leaf;
         keys = new String[(2 * t) - 1];
-        children = new Node[2 * t];
-        this.index = 0;
+        children = new int[2 * t];
+        this.leaf = leaf;
+        n = 0;
+        this.tree = tree;
     }
 
-    public int getN() {
+
+    public void traverse() throws IOException, ClassNotFoundException {
+        if (leaf) {
+            for (int i = 0; i < t; i++) {
+                if (keys[i] != null) {
+                    System.out.println(keys[i] + "\n");
+                }
+            }
+        } else {
+            for (int i = 0; i < t; i++) {
+                Node child = readNode(children[i]);
+                if (child != null) {
+                    child.traverse();
+                }
+            }
+        }
+    }
+
+    public Node search(Node x, String key) throws IOException, ClassNotFoundException {
+        int i = 0;
+        while (i < n && key.compareTo(x.keys[i]) > 0) {
+            i++;
+        }
+        if (keys[i].equals(key)) {
+            return this;
+        }
+        if (leaf) {
+            return null;
+        } else {
+            Node child = null;
+            for (int j = 0; j < children.length; j++) {
+                child = readNode(x.children[i]);
+            }
+            if (child != null) {
+                return search(child, key);
+            }
+            return null;
+        }
+    }
+
+    public Node readNode(int index) throws IOException, ClassNotFoundException {
+        String name = "node_" + index;
+        File f = new File(tree.context.getFilesDir(), name);
+        ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
+        Node n = (Node) in.readObject();
+        in.close();
         return n;
     }
 
-    public void setN(int n) {
-        this.n = n;
-    }
 
-    public boolean isLeaf() {
-        return leaf;
-    }
-
-    public void setLeaf(boolean leaf) {
-        this.leaf = leaf;
-    }
-
-    public String[] getKeys() {
-        return keys;
-    }
-
-    public void setKeys(String[] keys) {
-        this.keys = keys;
-    }
-
-    public Node[] getChildren() {
-        return children;
-    }
-
-    public void setChildren(Node[] children) {
-        this.children = children;
-    }
-
-    public int getT() {
-        return t;
-    }
-
-    public void setT(int t) {
-        this.t = t;
-    }
-
-    public boolean nodeIsFull(Node x) {
-        for (int i = 0; i < x.keys.length; i++) {
-            if (x.keys[i] != null) return false;
-        }
-        return true;
-    }
-
-    public int getIndex() {
-        return index;
-    }
-
-    public void setIndex(int index) {
-        this.index = index;
-    }
 }

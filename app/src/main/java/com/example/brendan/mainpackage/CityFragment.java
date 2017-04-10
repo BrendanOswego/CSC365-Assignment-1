@@ -13,14 +13,14 @@ import android.widget.ListView;
 import com.example.brendan.mainpackage.api.APIClass;
 import com.example.brendan.mainpackage.datastrctures.BTree;
 import com.example.brendan.mainpackage.datastrctures.CustomHashTable;
-import com.example.brendan.mainpackage.datastrctures.Node;
+import com.example.brendan.mainpackage.datastrctures.KMeans;
 import com.example.brendan.mainpackage.event.CityDataEvent;
 import com.example.brendan.mainpackage.event.CityLocationEvent;
 import com.example.brendan.mainpackage.event.FinishEvent;
-import com.example.brendan.mainpackage.model.CityJson;
 import com.example.brendan.mainpackage.model.DataModel;
 import com.example.brendan.mainpackage.model.DataResults;
 import com.example.brendan.mainpackage.model.LocationModel;
+import com.example.brendan.mainpackage.model.NodeList;
 import com.example.brendan.mainpackage.view.CityAdapter;
 import com.example.brendan.mainpackage.view.CityItem;
 
@@ -29,7 +29,7 @@ import org.greenrobot.eventbus.Subscribe;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.RandomAccessFile;
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.UUID;
 
@@ -47,8 +47,6 @@ import static android.view.View.GONE;
 public class CityFragment extends BaseFragment {
     private static final String TAG = CityFragment.class.getName();
     private static final String allLocationsJson = "all_locations.json";
-    private static final String summerValuesRAF = "summer_values.dat";
-    private static final String winterValuesRAF = "winter_values.dat";
     private static final String summerModel = "summer_model.json";
     private static final String winterModel = "winterModel.json";
     private static final String btreeFile = "btree.dat";
@@ -61,8 +59,8 @@ public class CityFragment extends BaseFragment {
     Button navSelection;
     @BindView(R.id.btn_summer)
     Button summer;
-    @BindView(R.id.btn_winter)
-    Button winter;
+    @BindView(R.id.btn_nav_cluster)
+    Button btnCluster;
     @BindView(R.id.frame_city)
     FrameLayout mainFrame;
 
@@ -74,13 +72,9 @@ public class CityFragment extends BaseFragment {
 
     CityAdapter adapter;
 
-    RandomAccessFile dataRAF;
-    RandomAccessFile btreeRAF;
-
     private boolean callMade = false;
     private int globalIndex = 0;
     String summerTime = "2016-07-15";
-    String winterTime = "2017-01-15"; //Year-Month-Day
     String date;
     ArrayList<String> cityNameList;
     ArrayList<String> cityIDList;
@@ -92,7 +86,7 @@ public class CityFragment extends BaseFragment {
     String name;
     String url;
     CustomHashTable<String, String> nameIDTable;
-    int max = 1000;
+    int max = 50;
 
     BTree tree;
     String seasonModel;
@@ -115,10 +109,19 @@ public class CityFragment extends BaseFragment {
             set_2_list = new ArrayList<>();
             cityItemList = new ArrayList<>();
             nameIDTable = new CustomHashTable<>();
-            try {
-                tree = new BTree(6, getContext());
-            } catch (IOException | ClassNotFoundException e) {
-                e.printStackTrace();
+            File bFile = new File(getActivity().getFilesDir(), "btree_serialized");
+            if (bFile.exists()) {
+                try {
+                    tree = BTree.readTree(getContext());
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            } else {
+                try {
+                    tree = new BTree(getContext(), 32);
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
             }
             mainFrame.setVisibility(View.VISIBLE);
             api = APIClass.getInstance();
@@ -159,36 +162,37 @@ public class CityFragment extends BaseFragment {
         EventBus.getDefault().unregister(this);
     }
 
+    @OnClick(R.id.btn_nav_cluster)
+    public void navigateToCluster() {
+        Bundle b = new Bundle();
+        NodeList values = null;
+        try {
+            values = tree.readValues(getContext());
+            b.putSerializable("values", values.getEntries());
+            if (set_1_list.isEmpty()) {
+                for (int i = 0; i < values.getEntries().size(); i++) {
+                    set_1_list.add(values.getEntries().get(i).getTavg());
+                }
+            }
+            if (set_2_list.isEmpty()) {
+                for (int i = 0; i < values.getEntries().size(); i++) {
+                    set_2_list.add(values.getEntries().get(i).getTmax());
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        b.putSerializable("tavg", set_1_list);
+        b.putSerializable("tmax", set_2_list);
+        b.putStringArrayList("names", cityNameList);
+        b.putSerializable("btree", tree);
+
+        ((MainActivity) getActivity()).navigateToClustering(b);
+    }
+
     @OnClick(R.id.btn_nav_selection)
     public void navigateToSelection() {
         ((MainActivity) getActivity()).navigateToSelection();
-    }
-
-    @OnClick(R.id.btn_winter)
-    public void loadWinterData() {
-        seasonModel = winterModel;
-        if (adapter != null) {
-            cityItemList = new ArrayList<>();
-            adapter.clear();
-            adapter.notifyDataSetChanged();
-        }
-        date = winterTime;
-        mainFrame.setVisibility(GONE);
-        File dir = getActivity().getFilesDir();
-        File f = new File(dir, allLocationsJson);
-        if (!f.exists()) {
-            api.showDialog("Loading New Locations", false, null);
-            locationUUID = api.getAllLocations();
-        } else {
-            api.showDialog("Loading Cached Locations", false, null);
-            LocationModel model = null;
-            try {
-                model = ((MainActivity) getActivity()).getLocationModel();
-                postLocationEvent(model, true);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
     }
 
     @OnClick(R.id.btn_summer)
@@ -212,14 +216,15 @@ public class CityFragment extends BaseFragment {
             try {
                 model = ((MainActivity) getActivity()).getLocationModel();
                 postLocationEvent(model, true);
-            } catch (IOException e) {
+            } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
         }
     }
 
     @Subscribe
-    public void onLocationEvent(CityLocationEvent event) throws IOException {
+    public void onLocationEvent(CityLocationEvent event) throws
+            IOException, ClassNotFoundException {
         if (event.getUuid().equals(this.locationUUID)) {
             LocationModel model = event.getModel();
             postLocationEvent(model, false);
@@ -227,7 +232,7 @@ public class CityFragment extends BaseFragment {
     }
 
     @Subscribe
-    public void onDataEvent(CityDataEvent event) throws IOException {
+    public void onDataEvent(CityDataEvent event) throws IOException, ClassNotFoundException {
         if (event.getUuid().equals(dataUUID)) {
             MainActivity.CityStatus status = ((MainActivity) getActivity()).writeCityFile(event.getUrl(), event.getMode(), seasonModel);
             Log.v(TAG, status.toString());
@@ -250,38 +255,11 @@ public class CityFragment extends BaseFragment {
                 } else if (event.getSetType().equals(SET_2)) {
                     if (event.isFinished()) {
                         CityItem item;
-                        File f;
-                        if (date.equals(summerTime)) {
-                            f = new File(getActivity().getFilesDir(), summerValuesRAF);
-                        } else {
-                            f = new File(getActivity().getFilesDir(), winterValuesRAF);
-                        }
-                        dataRAF = new RandomAccessFile(f, "rw");
                         for (int i = 0; i < cityNameList.size(); i++) {
                             item = new CityItem(cityNameList.get(i), set_1_list.get(i), set_2_list.get(i));
-                            dataRAF.writeBytes(cityIDList.get(i));
-                            if (set_1_list.get(i) != null) {
-                                dataRAF.writeDouble(set_1_list.get(i));
-                            } else {
-                                dataRAF.writeDouble(-999);
-                            }
-                            if (set_2_list.get(i) != null) {
-                                dataRAF.writeDouble(set_2_list.get(i));
-                            } else {
-                                dataRAF.writeDouble(-999);
-                            }
                             cityItemList.add(item);
+                            tree.writeValues(cityNameList.get(i), set_1_list.get(i), set_2_list.get(i));
                         }
-                        dataRAF.seek(0);
-                        for (int j = 0; j < cityNameList.size(); j++) {
-                            byte[] buffer = new byte[cityIDList.get(j).length()];
-                            dataRAF.read(buffer);
-                            String name = new String(buffer);
-                            Double tavg = dataRAF.readDouble();
-                            Double tmax = dataRAF.readDouble();
-                            Log.v(TAG, "ID: " + name + " TAVG: " + tavg + " TMAX: " + tmax);
-                        }
-                        dataRAF.close();
                         adapter = new CityAdapter(getContext(), cityItemList);
                         listView.setAdapter(adapter);
                         mainFrame.setVisibility(View.VISIBLE);
@@ -291,40 +269,11 @@ public class CityFragment extends BaseFragment {
             }
         } else {
             CityItem item;
-            File f;
-            if (date.equals(summerTime)) {
-                Log.v(TAG, "Summer Data");
-                f = new File(getActivity().getFilesDir(), summerValuesRAF);
-            } else {
-                Log.v(TAG, "Winter Data Data");
-                f = new File(getActivity().getFilesDir(), winterValuesRAF);
-            }
-            dataRAF = new RandomAccessFile(f, "rw");
             for (int i = 0; i < cityNameList.size(); i++) {
                 item = new CityItem(cityNameList.get(i), set_1_list.get(i), set_2_list.get(i));
-                dataRAF.writeBytes(cityIDList.get(i));
-                if (set_1_list.get(i) != null) {
-                    dataRAF.writeDouble(set_1_list.get(i));
-                } else {
-                    dataRAF.writeDouble(-999);
-                }
-                if (set_2_list.get(i) != null) {
-                    dataRAF.writeDouble(set_2_list.get(i));
-                } else {
-                    dataRAF.writeDouble(-999);
-                }
                 cityItemList.add(item);
+                tree.writeValues(cityNameList.get(i), set_1_list.get(i), set_2_list.get(i));
             }
-            dataRAF.seek(0);
-            for (int j = 0; j < cityNameList.size(); j++) {
-                byte[] buffer = new byte[cityIDList.get(j).length()];
-                dataRAF.read(buffer);
-                String name = new String(buffer);
-                Double tavg = dataRAF.readDouble();
-                Double tmax = dataRAF.readDouble();
-                Log.v(TAG, "ID: " + name + " TAVG: " + tavg + " TMAX: " + tmax);
-            }
-            dataRAF.close();
             adapter = new CityAdapter(getContext(), cityItemList);
             listView.setAdapter(adapter);
             mainFrame.setVisibility(View.VISIBLE);
@@ -332,28 +281,13 @@ public class CityFragment extends BaseFragment {
         }
     }
 
-    void loadCacheData(CityJson model) {
-        for (int i = 0; i < model.getData().size(); i++) {
-            DataModel data = model.getData().get(i).getValue();
-            String url = model.getData().get(i).getKey();
-            if (url.contains(SET_1)) {
-                dataSet = SET_1;
-            } else {
-                dataSet = SET_2;
-            }
-            postDataEvent(data, i, dataSet, url);
-        }
-        EventBus.getDefault().post(new FinishEvent(true, dataUUID, dataSet, true));
-    }
-
-    void postLocationEvent(LocationModel model, boolean exists) throws IOException {
+    void postLocationEvent(LocationModel model, boolean exists) throws IOException, ClassNotFoundException {
         if (!exists) {
             ((MainActivity) getActivity()).writeAllLocations(model);
         } else {
             model = ((MainActivity) getActivity()).getLocationModel();
         }
         File f = new File(getActivity().getFilesDir(), btreeFile);
-        btreeRAF = new RandomAccessFile(f, "rw");
         int a = model.getMetadata().getResultset().getLimit();
         int b = model.getMetadata().getResultset().getCount();
         int count = (a <= b) ? a : b;
@@ -362,34 +296,31 @@ public class CityFragment extends BaseFragment {
                 cityNameList.add(model.getResults().get(c).getName());
                 cityIDList.add(model.getResults().get(c).getId());
                 nameIDTable.insert(model.getResults().get(c).getName(), model.getResults().get(c).getId());
-                try {
-                    tree.insert( cityNameList.get(c));
-                } catch (ClassNotFoundException e) {
-                    e.printStackTrace();
-                }
             }
         }
-
-        btreeRAF.seek(0);
-        btreeRAF.close();
         api.closeDialog();
+        File bFile = new File(getActivity().getFilesDir(), "btree_serialized");
+        if (!bFile.exists()) {
+            new NodeAsyncTask().execute();
+        } else {
+            NodeList values = tree.readValues(getContext());
+            CityItem item;
+            for (int i = 0; i < values.getEntries().size(); i++) {
+                item = new CityItem(values.getEntries().get(i).getName(),
+                        values.getEntries().get(i).getTavg(),
+                        values.getEntries().get(i).getTmax());
+                cityItemList.add(item);
+            }
+            adapter = new CityAdapter(getContext(), cityItemList);
+            listView.setAdapter(adapter);
+            mainFrame.setVisibility(View.VISIBLE);
+            return;
+        }
         api.showDialog("Loading TAVG", true, max);
         if (seasonModel.equals(summerModel)) {
             if (((MainActivity) getActivity()).getSummerModel() != null) {
                 if (set_1_list != null) set_1_list = new ArrayList<>();
                 if (set_2_list != null) set_2_list = new ArrayList<>();
-                loadCacheData(((MainActivity) getActivity()).getSummerModel());
-            } else {
-                String[] params = new String[2];
-                params[0] = date;
-                params[1] = SET_1;
-                new Task().execute(params);
-            }
-        } else if (seasonModel.equals(winterModel)) {
-            if (((MainActivity) getActivity()).getWinterModel() != null) {
-                if (set_1_list != null) set_1_list = new ArrayList<>();
-                if (set_2_list != null) set_2_list = new ArrayList<>();
-                loadCacheData(((MainActivity) getActivity()).getWinterModel());
             } else {
                 String[] params = new String[2];
                 params[0] = date;
@@ -397,15 +328,16 @@ public class CityFragment extends BaseFragment {
                 new Task().execute(params);
             }
         }
+
     }
 
-    void postDataEvent(DataModel model, int index, String dataset, String url) {
+    void postDataEvent(DataModel model, int index, String dataset, String url) throws IOException, ClassNotFoundException {
         dataResults = model.getResults();
-        Double tempTotal = null;
-        Double pcpTotal = null;
+        Double set_1_total = null;
+        Double set_2_total = null;
         if (dataResults != null) {
-            tempTotal = 0.0;
-            pcpTotal = 0.0;
+            set_1_total = 0.0;
+            set_2_total = 0.0;
             int a = model.getMetadata().getResultset().getLimit();
             int b = model.getMetadata().getResultset().getCount();
             int count = (a <= b) ? a : b;
@@ -413,21 +345,22 @@ public class CityFragment extends BaseFragment {
             int pcpStations = 0;
             for (int c = 0; c < count; c++) {
                 if (model.getResults().get(c).getDatatype().equals(SET_1)) {
-                    tempTotal += model.getResults().get(c).getValue();
+                    set_1_total += model.getResults().get(c).getValue();
                     tempStations++;
+
                 } else if (model.getResults().get(c).getDatatype().equals(SET_2)) {
-                    pcpTotal += model.getResults().get(c).getValue();
+                    set_2_total += model.getResults().get(c).getValue();
                     pcpStations++;
                 }
             }
-            tempTotal = tempTotal / tempStations;
-            pcpTotal = pcpTotal / pcpStations;
+            set_1_total = set_1_total / tempStations;
+            set_2_total = set_2_total / pcpStations;
         }
         if (dataset.equals(SET_1)) {
-            set_1_list.add(tempTotal);
+            set_1_list.add(set_1_total);
         }
         if (dataset.equals(SET_2)) {
-            set_2_list.add(pcpTotal);
+            set_2_list.add(set_2_total);
         }
         callMade = true;
     }
@@ -492,6 +425,31 @@ public class CityFragment extends BaseFragment {
                 }
             });
 
+            return null;
+        }
+    }
+
+    private class NodeAsyncTask extends AsyncTask<Void, Void, Void> {
+
+        @Override
+        protected Void doInBackground(Void... voids) {
+            for (int i = 0; i < cityNameList.size(); i++) {
+                try {
+                    tree.insert(cityNameList.get(i));
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                }
+            }
+            try {
+                tree.writeTree(tree);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
             return null;
         }
     }

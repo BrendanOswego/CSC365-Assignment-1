@@ -23,7 +23,7 @@ interface RetroInterface {
     @GET("locations?locationcategoryid=ST&limit=52")
     Call<LocationModel> getAllStates();
 
-    @GET("locations?limit=1000")
+    @GET("locations?limit=50")
     Call<LocationModel> getAllLocations();
 
 }

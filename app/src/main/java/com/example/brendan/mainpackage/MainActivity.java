@@ -35,6 +35,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.io.Serializable;
 import java.io.Writer;
 import java.util.ArrayList;
 import java.util.List;
@@ -56,10 +57,9 @@ import java.util.List;
 public class MainActivity extends BaseActivity {
     private static final String TAG = MainActivity.class.getName();
     private static final String masterJson = "data_2.json";
-    private static final String locationJson = "location_model_1.json";
+    private static final String locationJson = "location_model.json";
     private static final String allLocationsJson = "all_locations.json";
     private static final String summerModel = "summer_model.json";
-    private static final String winterModel = "winterModel.json";
     private String startTime;
     private JsonModel master;
 
@@ -73,12 +73,6 @@ public class MainActivity extends BaseActivity {
         EXISTS,
         ADDED,
         CREATED
-    }
-
-    enum FileStatus {
-        CREATED,
-        ADDED,
-        EXISTS
     }
 
     @Override
@@ -155,6 +149,21 @@ public class MainActivity extends BaseActivity {
         }
     }
 
+    public void navigateToClustering(Bundle b) {
+        BaseFragment f = new ClusteringFragment();
+        f.setArguments(b);
+        FragmentManager m = getSupportFragmentManager();
+        if (m.findFragmentByTag("clusteringFragment") == null) {
+            m.beginTransaction()
+                    .replace(R.id.fragment_container, f, "clusteringFragment")
+                    .commit();
+        } else {
+            m.beginTransaction()
+                    .replace(R.id.fragment_container, m.findFragmentByTag("clusteringFragment"))
+                    .commit();
+        }
+    }
+
     /**
      * Sends User to MainFragment
      */
@@ -211,16 +220,12 @@ public class MainActivity extends BaseActivity {
         File dir = getFilesDir();
         File file = new File(dir, time);
         Gson gson = new Gson();
-        CityJson json;
+        CityJson json = null;
         Writer writer = null;
         BufferedWriter buffer = null;
         if (file.exists()) {
             try {
-                if (time.equals(summerModel)) {
-                    json = getSummerModel();
-                } else {
-                    json = getWinterModel();
-                }
+                json = getSummerModel();
                 CityEntries entry = new CityEntries();
                 entry.setKey(url);
                 if (model == null) {
@@ -398,18 +403,6 @@ public class MainActivity extends BaseActivity {
         return gson.fromJson(isr, CityJson.class);
     }
 
-    CityJson getWinterModel() throws FileNotFoundException {
-        File dir = getFilesDir();
-        File file = new File(dir, winterModel);
-        if (!file.exists()) {
-            return null;
-        }
-        Gson gson = new Gson();
-        FileInputStream fis = openFileInput(winterModel);
-        InputStreamReader isr = new InputStreamReader(fis);
-        return gson.fromJson(isr, CityJson.class);
-    }
-
     LocationModel getLocationModel() throws FileNotFoundException {
         File dir = getFilesDir();
         File file = new File(dir, allLocationsJson);
@@ -442,11 +435,6 @@ public class MainActivity extends BaseActivity {
         }
         return false;
     }
-
-    public boolean locationModelExists() throws FileNotFoundException {
-        return getLocationModel() != null;
-    }
-
     /**
      * @param date Date chosen by User
      * @return The List of DataEntries for a given date

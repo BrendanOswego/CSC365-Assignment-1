@@ -4,23 +4,25 @@ package com.example.brendan.mainpackage.datastrctures;
 import android.content.Context;
 import android.util.Log;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataOutputStream;
+import com.example.brendan.mainpackage.R;
+import com.example.brendan.mainpackage.model.NodeEntry;
+import com.example.brendan.mainpackage.model.NodeList;
+import com.google.gson.Gson;
+import com.google.gson.stream.JsonReader;
+
+import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.IOException;
-import java.io.ObjectInput;
+import java.io.InputStreamReader;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
-import java.io.RandomAccessFile;
 import java.io.Serializable;
-import java.sql.SQLOutput;
-import java.util.Arrays;
+import java.io.Writer;
+import java.util.ArrayList;
 
 
 /**
@@ -29,171 +31,246 @@ import java.util.Arrays;
 
 public class BTree implements Serializable {
     private static final String TAG = BTree.class.getName();
-    private static final String fileName = "btree_23";
-    private static int SIZEOF_NODE = 340;
-    private static int SIZEOF_INDEX = 12;
-    private static int SIZEOF_EVERYTHING_BESIDES_INDEX = 328;
+    private static final String valuesFile = "values";
+    public Node root;
+    public int totalNodes;
+    public transient Context context;
+    private int t;
 
-    RandomAccessFile raf;
-    Node root;
-    int t;
-    long offsetPosition;
-    Context context;
-
-    boolean deleteFileOnExit = false;
-
-    public BTree(int t, Context context) throws IOException, ClassNotFoundException {
-        this.t = t;
+    public BTree(Context context, int t) throws IOException, ClassNotFoundException {
         this.context = context;
-        File f = new File(context.getCacheDir(), fileName);
-        if (deleteFileOnExit) {
-            boolean deleted = f.delete();
-            System.out.println("Delete File: " + deleted);
-            f = new File(context.getCacheDir(), fileName);
+        totalNodes = 0;
+        this.t = t;
+        Node root;
+        String name = String.format(context.getString(R.string.node_format), 0);
+        File f = new File(context.getFilesDir(), name);
+        if (!f.exists()) {
+            Log.v(TAG, "Write New Root");
+            root = new Node(t, true, this);
+            root.index = totalNodes;
+            writeNode(root, root.index);
+            totalNodes = totalNodes + 1;
+        } else {
+            Log.v(TAG, "Reading Root");
+            root = readNode(0);
         }
-        try {
-            raf = new RandomAccessFile(f, "rw");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        }
-        create_tree();
+        Log.v(TAG, "Root number: " + root.index);
+        this.root = root;
     }
 
-    Node search(Node x, String key) {
-        int i = 1;
-        int compare = key.compareTo(x.keys[i]);
-        while (i <= x.n && compare > 0) {
-            i++;
+
+    public Node search(Node x, String k) throws IOException, ClassNotFoundException {
+        int i = 0;
+        while (i <= x.n && k.compareTo(x.keys[i]) > 0) {
+            i = i + 1;
         }
-        compare = key.compareTo(x.keys[i]);
-        if (i <= x.n && compare == 0) {
+        if (i <= x.n && k.equals(x.keys[i])) {
+            Log.v(TAG, "Return param node");
             return x;
         } else if (x.leaf) {
+            Log.v(TAG, "Return null IS leaf");
             return null;
         } else {
-
-            return search(x.children[i], key);
-        }
-    }
-
-    void create_tree() throws IOException, ClassNotFoundException {
-        Node x = allocate_node();
-        x.leaf = true;
-        x.n = 0;
-        write(x);
-        this.root = x;
-    }
-
-    void split_child(Node x, int i) throws IOException, ClassNotFoundException {
-        Node z = allocate_node();
-        Node y = x.children[i];
-        z.leaf = y.leaf;
-        z.n = t - 1;
-        for (int j = 1; j < t - 1; j++) {
-            z.keys[j] = y.keys[j + t];
-        }
-        if (!y.leaf) {
-            for (int j = 1; j < t; j++) {
-                z.children[j] = y.children[j + t];
+            Node c = null;
+            for (int j = 0; j < x.children.length; j++) {
+                c = readNode(j);
             }
+            if (c != null) {
+                Log.v(TAG, "Recursion");
+                return search(c, k);
+            }
+        }
+        return null;
+    }
+
+    public void writeNode(Node node, int index) throws IOException {
+        Log.v(TAG, "Total Keys in node " + index + " = " + node.n);
+        String format = "node_" + index;
+        File f = new File(context.getFilesDir(), format);
+        FileOutputStream fos = new FileOutputStream(f);
+        ObjectOutputStream out = new ObjectOutputStream(fos);
+        out.writeObject(node);
+        out.flush();
+        out.close();
+        Log.v(TAG, "Node " + index + " written to");
+    }
+
+    public Node readNode(int index) throws IOException, ClassNotFoundException {
+        String name = "node_" + index;
+        File f = new File(context.getFilesDir(), name);
+        ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
+        Node n = (Node) in.readObject();
+        in.close();
+        return n;
+    }
+
+    public Node readNodeWithContext(int index, Context context) throws IOException, ClassNotFoundException {
+        String name = "node_" + index;
+        File f = new File(context.getFilesDir(), name);
+        ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
+        Node n = (Node) in.readObject();
+        in.close();
+        return n;
+    }
+
+    void splitChild(Node x, int i, Node y) throws IOException, ClassNotFoundException {
+        Log.v(TAG, "Splitting child");
+        Node z = new Node(t, y.leaf, this);
+        z.index = totalNodes;
+        totalNodes = totalNodes + 1;
+        z.n = t - 1;
+        for (int j = 0; j < t - 1; j++)
+            z.keys[j] = y.keys[j + t];
+
+        if (!y.leaf) {
+            for (int j = 0; j < t; j++)
+                z.children[j] = y.children[j + t];
         }
         y.n = t - 1;
-        for (int j = x.n + 1; j > i + 1; j--) {
+        for (int j = x.n + 1; j >= i + 1; j--)
             x.children[j + 1] = x.children[j];
-        }
-        x.children[i + 1] = z;
-        for (int j = x.n; j > i; j++) {
+
+        x.children[i + 1] = z.index;
+
+        for (int j = x.n; j >= i; j--)
             x.keys[j + 1] = x.keys[j];
-        }
-        x.keys[i] = y.keys[t];
+
+        x.keys[i] = y.keys[t - 1];
         x.n = x.n + 1;
-        write(y);
-        write(z);
-        write(x);
+        writeNode(y, y.index);
+        writeNode(z, z.index);
+        writeNode(x, x.index);
     }
 
-    public void insert(String key) throws IOException, ClassNotFoundException {
-        Node r = root;
-        if (r.n == ((2 * t) - 1)) {
-            Node s = allocate_node();
+    public void insert(String key) throws IOException, FileNotFoundException, ClassNotFoundException {
+        Node r = readNode(root.index);
+        if (r.n == (2 * t) - 1) {
+            Log.v(TAG, "Root full size");
+            Node s = new Node(r.t, false, this);
             root = s;
-            s.leaf = false;
-            s.n = 0;
-            s.children[1] = r;
-            split_child(s, 1);
-            insert_nonfull(s, key);
+            s.index = totalNodes;
+            totalNodes = totalNodes + 1;
+            s.children[0] = r.index;
+            splitChild(s, 0, r);
+            insertNonfull(s, key);
         } else {
-            insert_nonfull(r, key);
+            Log.v(TAG, "Root Node is not full");
+            insertNonfull(r, key);
         }
     }
 
-    void insert_nonfull(Node x, String key) throws IOException, ClassNotFoundException {
-        int i = x.n;
-        int compare = key.compareTo(x.keys[i]);
+    public void insertNonfull(Node x, String k) throws IOException, ClassNotFoundException {
+        int i = x.n - 1;
         if (x.leaf) {
-            while (i >= 1 && compare < 0) {
+            while (i >= 0 && k.compareTo(x.keys[i]) < 0) {
                 x.keys[i + 1] = x.keys[i];
-                i--;
+                i = i - 1;
             }
-            x.keys[i + 1] = key;
+            x.keys[i + 1] = k;
             x.n = x.n + 1;
-            write(x);
+            writeNode(x, x.index);
         } else {
-            while (i >= 1 && compare < 0) {
-                i--;
+            while (i >= 0 && k.compareTo(x.keys[i]) < 0) {
+                i = i - 1;
             }
-            i++;
-            compare = key.compareTo(x.keys[i]);
-            if (x.children[i].n == (2 * t - 1)) {
-                split_child(x, i);
-                if (compare > 0) {
-                    i++;
+            i = i + 1;
+            Node child = readNode(x.children[i]);
+            if (child.n == (2 * t) - 1) {
+                splitChild(x, i, child);
+                if (k.compareTo(x.keys[i]) > 0) {
+                    i = i + 1;
                 }
             }
-            insert_nonfull(x.children[i], key);
+            if (x.children[i] != child.index) {
+                child = readNode(x.children[i]);
+            }
+            insertNonfull(child, k);
         }
     }
 
-    void write(Node x) throws IOException, ClassNotFoundException {
-        x.setIndex(5);
-        byte[] serialize = serialize(x);
-        System.out.println("SIZEOF ARR: " + serialize.length);
-        raf.write(serialize);
-        Node temp = deserialize(serialize);
-        System.out.println("Index: " + temp.getIndex());
-        offsetPosition = raf.getFilePointer();
+    public void writeValues(String name, Double tavg, Double tmax) throws IOException {
+        Log.v(TAG, "Writing Values...Name = " + name + " TAVG = " + tavg + " TMAX = " + tmax);
+        Writer writer = null;
+        BufferedWriter buffer = null;
+        if (tavg == null) tavg = -999.0;
+        if (tmax == null) tmax = -999.0;
+        Gson gson = new Gson();
+        File dir = context.getFilesDir();
+        File f = new File(dir, valuesFile);
+        if (!f.exists()) {
+            try {
+                NodeList entries = new NodeList();
+                ArrayList<NodeEntry> entryList = new ArrayList<>();
+                NodeEntry entry = new NodeEntry();
+                entry.setName(name);
+                entry.setTavg(tavg);
+                entry.setTmax(tmax);
+                entryList.add(entry);
+                entries.setEntries(entryList);
+                writer = new FileWriter(f.getAbsolutePath());
+                buffer = new BufferedWriter(writer);
+                gson.toJson(entries, buffer);
+            } finally {
+                if (buffer != null) {
+                    buffer.close();
+                }
+                if (writer != null) {
+                    writer.close();
+                }
+
+            }
+        } else {
+            try {
+                FileInputStream fis = context.openFileInput(valuesFile);
+                InputStreamReader isr = new InputStreamReader(fis);
+                NodeList nodes = gson.fromJson(isr, NodeList.class);
+                NodeEntry entry = new NodeEntry();
+                entry.setTmax(tmax);
+                entry.setTavg(tavg);
+                entry.setName(name);
+                nodes.getEntries().add(entry);
+                writer = new FileWriter(f.getAbsolutePath());
+                buffer = new BufferedWriter(writer);
+                gson.toJson(nodes, buffer);
+            } finally {
+                if (buffer != null) {
+                    buffer.close();
+                }
+                if (writer != null) {
+                    writer.close();
+                }
+
+            }
+        }
     }
 
-
-    void read() throws IOException, ClassNotFoundException {
-        //TODO: Figure out what to put here later.
+    public NodeList readValues(Context context) throws IOException {
+        Gson gson = new Gson();
+        FileInputStream fis = context.openFileInput(valuesFile);
+        InputStreamReader isr = new InputStreamReader(fis);
+        NodeList nodes = gson.fromJson(isr, NodeList.class);
+        isr.close();
+        return nodes;
     }
 
-    Node allocate_node() throws IOException {
-        Node x = new Node(t, false);
-        x.setIndex(5);
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-        oos.writeObject(x);
-        oos.close();
-        long length = raf.length();
-        raf.setLength(raf.length() + baos.toByteArray().length);
-        raf.seek(length);
-
-        return x;
+    public void writeTree(BTree tree) throws IOException {
+        String format = "btree_serialized";
+        File f = new File(context.getFilesDir(), format);
+        FileOutputStream fos = new FileOutputStream(f);
+        ObjectOutputStream out = new ObjectOutputStream(fos);
+        out.writeObject(tree);
+        out.flush();
+        out.close();
     }
 
-    private byte[] serialize(Node obj) throws IOException {
-        ByteArrayOutputStream b = new ByteArrayOutputStream();
-        ObjectOutputStream o = new ObjectOutputStream(b);
-        o.writeObject(obj);
-        return b.toByteArray();
+    public static BTree readTree(Context context) throws IOException, ClassNotFoundException {
+        String format = "btree_serialized";
+        File f = new File(context.getFilesDir(), format);
+        ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
+        BTree n = (BTree) in.readObject();
+        in.close();
+        return n;
     }
 
-    private Node deserialize(byte[] bytes) throws IOException, ClassNotFoundException {
-        ByteArrayInputStream b = new ByteArrayInputStream(bytes);
-        ObjectInputStream o = new ObjectInputStream(b);
-        return (Node) o.readObject();
-    }
 
 }
