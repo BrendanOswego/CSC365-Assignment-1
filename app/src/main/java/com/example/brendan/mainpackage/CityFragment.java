@@ -1,19 +1,23 @@
 package com.example.brendan.mainpackage;
 
+import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ListView;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import com.example.brendan.mainpackage.api.APIClass;
 import com.example.brendan.mainpackage.datastrctures.BTree;
 import com.example.brendan.mainpackage.datastrctures.CustomHashTable;
-import com.example.brendan.mainpackage.datastrctures.KMeans;
+import com.example.brendan.mainpackage.datastrctures.Node;
 import com.example.brendan.mainpackage.event.CityDataEvent;
 import com.example.brendan.mainpackage.event.CityLocationEvent;
 import com.example.brendan.mainpackage.event.FinishEvent;
@@ -28,9 +32,11 @@ import org.greenrobot.eventbus.EventBus;
 import org.greenrobot.eventbus.Subscribe;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.Serializable;
+import java.io.ObjectInputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.UUID;
 
 import butterknife.BindView;
@@ -77,8 +83,10 @@ public class CityFragment extends BaseFragment {
     String summerTime = "2016-07-15";
     String date;
     ArrayList<String> cityNameList;
+    ArrayList<String> IDList;
     ArrayList<String> cityIDList;
     ArrayList<Double> set_1_list;
+    CustomHashTable<String, Double> table;
     ArrayList<Double> set_2_list;
     ArrayList<DataResults> dataResults;
     ArrayList<CityItem> cityItemList;
@@ -86,7 +94,8 @@ public class CityFragment extends BaseFragment {
     String name;
     String url;
     CustomHashTable<String, String> nameIDTable;
-    int max = 50;
+    private CustomHashTable<String, String> locationTable;
+    int max = 1000;
 
     BTree tree;
     String seasonModel;
@@ -103,22 +112,26 @@ public class CityFragment extends BaseFragment {
         final View view = inflater.inflate(R.layout.fragment_city, container, false);
         unbinder = ButterKnife.bind(this, view);
         if (savedInstanceState == null) {
+            listView.setOnItemClickListener(listViewClickListener);
             cityNameList = new ArrayList<>();
             cityIDList = new ArrayList<>();
             set_1_list = new ArrayList<>();
             set_2_list = new ArrayList<>();
             cityItemList = new ArrayList<>();
+            locationTable = new CustomHashTable<>();
+            table = new CustomHashTable<>();
             nameIDTable = new CustomHashTable<>();
             File bFile = new File(getActivity().getFilesDir(), "btree_serialized");
             if (bFile.exists()) {
                 try {
-                    tree = BTree.readTree(getContext());
+                    tree = readTree();
+                    tree = tree.readTree();
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
             } else {
                 try {
-                    tree = new BTree(getContext(), 32);
+                    tree = new BTree(64);
                 } catch (IOException | ClassNotFoundException e) {
                     e.printStackTrace();
                 }
@@ -167,7 +180,7 @@ public class CityFragment extends BaseFragment {
         Bundle b = new Bundle();
         NodeList values = null;
         try {
-            values = tree.readValues(getContext());
+            values = tree.readValues();
             b.putSerializable("values", values.getEntries());
             if (set_1_list.isEmpty()) {
                 for (int i = 0; i < values.getEntries().size(); i++) {
@@ -234,9 +247,9 @@ public class CityFragment extends BaseFragment {
     @Subscribe
     public void onDataEvent(CityDataEvent event) throws IOException, ClassNotFoundException {
         if (event.getUuid().equals(dataUUID)) {
-            MainActivity.CityStatus status = ((MainActivity) getActivity()).writeCityFile(event.getUrl(), event.getMode(), seasonModel);
+            MainActivity.CityStatus status = ((MainActivity) getActivity()).writeCityFile(event.getUrl(), event.getModel(), seasonModel);
             Log.v(TAG, status.toString());
-            postDataEvent(event.getMode(), globalIndex, dataSet, event.getUrl());
+            postDataEvent(event.getModel(), dataSet);
         }
     }
 
@@ -258,6 +271,7 @@ public class CityFragment extends BaseFragment {
                         for (int i = 0; i < cityNameList.size(); i++) {
                             item = new CityItem(cityNameList.get(i), set_1_list.get(i), set_2_list.get(i));
                             cityItemList.add(item);
+                            table.insert(cityIDList.get(i), set_1_list.get(i));
                             tree.writeValues(cityNameList.get(i), set_1_list.get(i), set_2_list.get(i));
                         }
                         adapter = new CityAdapter(getContext(), cityItemList);
@@ -293,6 +307,7 @@ public class CityFragment extends BaseFragment {
         int count = (a <= b) ? a : b;
         for (int c = 0; c < count; c++) {
             if (!cityNameList.contains(model.getResults().get(c).getName()) && !cityIDList.contains(model.getResults().get(c).getId())) {
+                locationTable.insert(model.getResults().get(c).getName(), model.getResults().get(c).getId());
                 cityNameList.add(model.getResults().get(c).getName());
                 cityIDList.add(model.getResults().get(c).getId());
                 nameIDTable.insert(model.getResults().get(c).getName(), model.getResults().get(c).getId());
@@ -303,13 +318,23 @@ public class CityFragment extends BaseFragment {
         if (!bFile.exists()) {
             new NodeAsyncTask().execute();
         } else {
-            NodeList values = tree.readValues(getContext());
+            ArrayList<String> nameList = new ArrayList<>();
+            tree = readTree();
+            NodeList values = tree.readValues();
+            for (int i = 0; i < tree.readNodeTotal(); i++) {
+                Node temp = tree.readNode(i);
+                temp.traverse();
+                ArrayList<String> nodeKeyList = temp.getTraversalList();
+                Log.v(TAG, nodeKeyList.toString());
+                nameList.addAll(nodeKeyList);
+            }
             CityItem item;
-            for (int i = 0; i < values.getEntries().size(); i++) {
-                item = new CityItem(values.getEntries().get(i).getName(),
+            for (int i = 0; i < cityNameList.size(); i++) {
+                item = new CityItem(cityNameList.get(i),
                         values.getEntries().get(i).getTavg(),
                         values.getEntries().get(i).getTmax());
                 cityItemList.add(item);
+                table.insert(cityNameList.get(i), values.getEntries().get(i).getTavg());
             }
             adapter = new CityAdapter(getContext(), cityItemList);
             listView.setAdapter(adapter);
@@ -331,7 +356,7 @@ public class CityFragment extends BaseFragment {
 
     }
 
-    void postDataEvent(DataModel model, int index, String dataset, String url) throws IOException, ClassNotFoundException {
+    void postDataEvent(DataModel model, String dataset) throws IOException, ClassNotFoundException {
         dataResults = model.getResults();
         Double set_1_total = null;
         Double set_2_total = null;
@@ -363,6 +388,44 @@ public class CityFragment extends BaseFragment {
             set_2_list.add(set_2_total);
         }
         callMade = true;
+    }
+
+    AdapterView.OnItemClickListener listViewClickListener = new AdapterView.OnItemClickListener() {
+        @Override
+        public void onItemClick(AdapterView<?> adapterView, View view, int viewIndex, long l) {
+            TextView city = (TextView) view.findViewById(R.id.view_city_name);
+            Log.v(TAG, "City Name: " + city.getText());
+            Double compareTo = table.search(city.getText().toString());
+            if (compareTo != null) {
+                Double temp;
+                //Playing it safe
+                Double winner = 0.0000000000;
+                int index = 0;
+                for (int i = 0; i < cityNameList.size(); i++) {
+                    if (table.search(cityNameList.get(i)) != null) {
+                        temp = table.search(cityNameList.get(i));
+                        Double distance = getDistance(compareTo, temp);
+                        if (((distance < winner) || winner == 0.0000000000) && !temp.equals(compareTo)) {
+                            winner = distance;
+                            index = i;
+                        }
+                    }
+                }
+                Toast.makeText(getContext(), "Most Similar: " + cityNameList.get(index), Toast.LENGTH_SHORT).show();
+            } else {
+                Toast.makeText(getContext(), "There is no information for selected state", Toast.LENGTH_SHORT).show();
+            }
+        }
+    };
+
+    public double getDistance(double x, double y) {
+        double sum = 0.0;
+        if (x > y) {
+            sum += Math.pow(x - y, 2.0);
+        } else {
+            sum += Math.pow(y - x, 2.0);
+        }
+        return Math.sqrt(sum);
     }
 
     void setGlobalIndex(int globalIndex) {
@@ -453,4 +516,14 @@ public class CityFragment extends BaseFragment {
             return null;
         }
     }
+
+    public BTree readTree() throws IOException, ClassNotFoundException {
+        String format = "btree_serialized";
+        File f = new File(ContextClass.getContext().getFilesDir(), format);
+        ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
+        BTree n = (BTree) in.readObject();
+        in.close();
+        return n;
+    }
+
 }

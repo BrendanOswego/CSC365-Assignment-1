@@ -1,9 +1,14 @@
 package com.example.brendan.mainpackage.datastrctures;
 
 
+import android.app.Application;
 import android.content.Context;
+import android.os.Environment;
+import android.support.v4.app.Fragment;
 import android.util.Log;
 
+import com.example.brendan.mainpackage.CityFragment;
+import com.example.brendan.mainpackage.ContextClass;
 import com.example.brendan.mainpackage.R;
 import com.example.brendan.mainpackage.model.NodeEntry;
 import com.example.brendan.mainpackage.model.NodeList;
@@ -32,24 +37,25 @@ import java.util.ArrayList;
 public class BTree implements Serializable {
     private static final String TAG = BTree.class.getName();
     private static final String valuesFile = "values";
+    private static final String nodeTotal = "nodeTotal";
     public Node root;
     public int totalNodes;
-    public transient Context context;
     private int t;
 
-    public BTree(Context context, int t) throws IOException, ClassNotFoundException {
-        this.context = context;
+
+    public BTree(int t) throws IOException, ClassNotFoundException {
         totalNodes = 0;
         this.t = t;
         Node root;
-        String name = String.format(context.getString(R.string.node_format), 0);
-        File f = new File(context.getFilesDir(), name);
+        String name = "node_" + 0;
+        File f = new File(ContextClass.getContext().getFilesDir(), name);
         if (!f.exists()) {
             Log.v(TAG, "Write New Root");
             root = new Node(t, true, this);
             root.index = totalNodes;
             writeNode(root, root.index);
             totalNodes = totalNodes + 1;
+            writeNodeTotal(totalNodes);
         } else {
             Log.v(TAG, "Reading Root");
             root = readNode(0);
@@ -58,35 +64,10 @@ public class BTree implements Serializable {
         this.root = root;
     }
 
-
-    public Node search(Node x, String k) throws IOException, ClassNotFoundException {
-        int i = 0;
-        while (i <= x.n && k.compareTo(x.keys[i]) > 0) {
-            i = i + 1;
-        }
-        if (i <= x.n && k.equals(x.keys[i])) {
-            Log.v(TAG, "Return param node");
-            return x;
-        } else if (x.leaf) {
-            Log.v(TAG, "Return null IS leaf");
-            return null;
-        } else {
-            Node c = null;
-            for (int j = 0; j < x.children.length; j++) {
-                c = readNode(j);
-            }
-            if (c != null) {
-                Log.v(TAG, "Recursion");
-                return search(c, k);
-            }
-        }
-        return null;
-    }
-
     public void writeNode(Node node, int index) throws IOException {
         Log.v(TAG, "Total Keys in node " + index + " = " + node.n);
         String format = "node_" + index;
-        File f = new File(context.getFilesDir(), format);
+        File f = new File(ContextClass.getContext().getFilesDir(), format);
         FileOutputStream fos = new FileOutputStream(f);
         ObjectOutputStream out = new ObjectOutputStream(fos);
         out.writeObject(node);
@@ -96,17 +77,9 @@ public class BTree implements Serializable {
     }
 
     public Node readNode(int index) throws IOException, ClassNotFoundException {
-        String name = "node_" + index;
-        File f = new File(context.getFilesDir(), name);
-        ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
-        Node n = (Node) in.readObject();
-        in.close();
-        return n;
-    }
 
-    public Node readNodeWithContext(int index, Context context) throws IOException, ClassNotFoundException {
         String name = "node_" + index;
-        File f = new File(context.getFilesDir(), name);
+        File f = new File(ContextClass.getContext().getFilesDir(), name);
         ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
         Node n = (Node) in.readObject();
         in.close();
@@ -118,6 +91,7 @@ public class BTree implements Serializable {
         Node z = new Node(t, y.leaf, this);
         z.index = totalNodes;
         totalNodes = totalNodes + 1;
+        writeNodeTotal(totalNodes);
         z.n = t - 1;
         for (int j = 0; j < t - 1; j++)
             z.keys[j] = y.keys[j + t];
@@ -150,6 +124,7 @@ public class BTree implements Serializable {
             root = s;
             s.index = totalNodes;
             totalNodes = totalNodes + 1;
+            writeNodeTotal(totalNodes);
             s.children[0] = r.index;
             splitChild(s, 0, r);
             insertNonfull(s, key);
@@ -195,8 +170,7 @@ public class BTree implements Serializable {
         if (tavg == null) tavg = -999.0;
         if (tmax == null) tmax = -999.0;
         Gson gson = new Gson();
-        File dir = context.getFilesDir();
-        File f = new File(dir, valuesFile);
+        File f = new File(ContextClass.getContext().getFilesDir(), valuesFile);
         if (!f.exists()) {
             try {
                 NodeList entries = new NodeList();
@@ -221,7 +195,8 @@ public class BTree implements Serializable {
             }
         } else {
             try {
-                FileInputStream fis = context.openFileInput(valuesFile);
+
+                FileInputStream fis = new FileInputStream(f);
                 InputStreamReader isr = new InputStreamReader(fis);
                 NodeList nodes = gson.fromJson(isr, NodeList.class);
                 NodeEntry entry = new NodeEntry();
@@ -244,9 +219,10 @@ public class BTree implements Serializable {
         }
     }
 
-    public NodeList readValues(Context context) throws IOException {
+    public NodeList readValues() throws IOException {
         Gson gson = new Gson();
-        FileInputStream fis = context.openFileInput(valuesFile);
+        File f = new File(ContextClass.getContext().getFilesDir(), valuesFile);
+        FileInputStream fis = new FileInputStream(f);
         InputStreamReader isr = new InputStreamReader(fis);
         NodeList nodes = gson.fromJson(isr, NodeList.class);
         isr.close();
@@ -255,7 +231,7 @@ public class BTree implements Serializable {
 
     public void writeTree(BTree tree) throws IOException {
         String format = "btree_serialized";
-        File f = new File(context.getFilesDir(), format);
+        File f = new File(ContextClass.getContext().getFilesDir(), format);
         FileOutputStream fos = new FileOutputStream(f);
         ObjectOutputStream out = new ObjectOutputStream(fos);
         out.writeObject(tree);
@@ -263,14 +239,30 @@ public class BTree implements Serializable {
         out.close();
     }
 
-    public static BTree readTree(Context context) throws IOException, ClassNotFoundException {
+    public BTree readTree() throws IOException, ClassNotFoundException {
         String format = "btree_serialized";
-        File f = new File(context.getFilesDir(), format);
+        File f = new File(ContextClass.getContext().getFilesDir(), format);
         ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
         BTree n = (BTree) in.readObject();
         in.close();
         return n;
     }
 
+    public void writeNodeTotal(int total) throws IOException {
+        File f = new File(ContextClass.getContext().getFilesDir(), nodeTotal);
+        FileOutputStream fos = new FileOutputStream(f);
+        ObjectOutputStream out = new ObjectOutputStream(fos);
+        out.writeInt(total);
+        out.flush();
+        out.close();
+    }
+
+    public int readNodeTotal() throws IOException {
+        File f = new File(ContextClass.getContext().getFilesDir(), nodeTotal);
+        ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
+        int n = in.readInt();
+        in.close();
+        return n;
+    }
 
 }

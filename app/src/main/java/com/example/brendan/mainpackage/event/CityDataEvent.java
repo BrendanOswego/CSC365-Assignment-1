@@ -20,7 +20,7 @@ public class CityDataEvent {
         this.url = url;
     }
 
-    public DataModel getMode() {
+    public DataModel getModel() {
         return model;
     }
 

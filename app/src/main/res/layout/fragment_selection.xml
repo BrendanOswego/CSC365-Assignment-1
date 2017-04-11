@@ -12,6 +12,7 @@
         android:orientation="vertical">
 
         <Button
+            android:visibility="gone"
             android:id="@+id/btn_assign_1"
             android:text="@string/title_assign_1"
             android:layout_width="170dp"

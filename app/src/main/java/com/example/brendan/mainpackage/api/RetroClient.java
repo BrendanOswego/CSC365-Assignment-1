@@ -45,7 +45,7 @@ class RetroClient {
                 Request original = chain.request();
 
                 Request.Builder requestBuilder = original.newBuilder()
-                        .header("token", backup);
+                        .header("token", token);
 
                 Request request = requestBuilder.build();
                 return chain.proceed(request);

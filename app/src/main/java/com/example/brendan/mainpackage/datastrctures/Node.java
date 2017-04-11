@@ -1,10 +1,16 @@
 package com.example.brendan.mainpackage.datastrctures;
 
+import android.content.Context;
+import android.os.Environment;
+
+import com.example.brendan.mainpackage.CityFragment;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 
 /**
  * Created by brendan on 4/10/17.
@@ -19,6 +25,8 @@ public class Node implements Serializable {
     int children[];
     boolean leaf;
     BTree tree;
+    ArrayList<String> traversalList;
+    transient Context context;
 
     Node(int t, boolean leaf, BTree tree) {
         this.t = t;
@@ -27,19 +35,20 @@ public class Node implements Serializable {
         this.leaf = leaf;
         n = 0;
         this.tree = tree;
+        traversalList = new ArrayList<>();
     }
-
 
     public void traverse() throws IOException, ClassNotFoundException {
         if (leaf) {
             for (int i = 0; i < t; i++) {
                 if (keys[i] != null) {
                     System.out.println(keys[i] + "\n");
+                    traversalList.add(keys[i]);
                 }
             }
         } else {
             for (int i = 0; i < t; i++) {
-                Node child = readNode(children[i]);
+                Node child = tree.readNode(children[i]);
                 if (child != null) {
                     child.traverse();
                 }
@@ -47,36 +56,8 @@ public class Node implements Serializable {
         }
     }
 
-    public Node search(Node x, String key) throws IOException, ClassNotFoundException {
-        int i = 0;
-        while (i < n && key.compareTo(x.keys[i]) > 0) {
-            i++;
-        }
-        if (keys[i].equals(key)) {
-            return this;
-        }
-        if (leaf) {
-            return null;
-        } else {
-            Node child = null;
-            for (int j = 0; j < children.length; j++) {
-                child = readNode(x.children[i]);
-            }
-            if (child != null) {
-                return search(child, key);
-            }
-            return null;
-        }
+    public ArrayList<String> getTraversalList() {
+        return traversalList;
     }
-
-    public Node readNode(int index) throws IOException, ClassNotFoundException {
-        String name = "node_" + index;
-        File f = new File(tree.context.getFilesDir(), name);
-        ObjectInputStream in = new ObjectInputStream(new FileInputStream(f));
-        Node n = (Node) in.readObject();
-        in.close();
-        return n;
-    }
-
 
 }
